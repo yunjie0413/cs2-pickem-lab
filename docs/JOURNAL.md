@@ -160,23 +160,52 @@ is split across names (handled in the model by linking lineups).
 
 ---
 
+## 2026-11-18, Step 5: How good are Valve's VRS points as predictions?
+
+**Done:** `pickem/evaluate.py` (log loss, Brier, accuracy, calibration; VRS
+points looked up from the snapshot strictly before each match, by lineup
+first, then by name) and `scripts/eval_baseline.py`. The scale is fitted on
+matches before 2025-11-01, and results are reported on matches from
+2025-11-01 on, which played no part in the fitting.
+
+**Result (test period, both teams in the global top 50, 1,440 matches):**
+
+| Model | Log loss | Brier | Accuracy |
+|---|---|---|---|
+| Coin flip | 0.6931 | 0.2500 | 50% |
+| VRS points, Valve's scale 400 | 0.7258 | 0.2538 | 59.5% |
+| VRS points, fitted scale 1100 | **0.6648** | **0.2362** | 59.5% |
+
+- With Valve's own curve, VRS is **worse than a coin flip** in log loss: badly
+  overconfident. When it gives the favourite 92%, the favourite wins 69%.
+  This confirms Valve's 2023 remark that the slope is too steep.
+- One fitted number (scale 1100) fixes the calibration (predicted ≈
+  observed in every bin with enough matches).
+- Top-50 CS is close to random: the favourite wins only about 60%.
+  **The 0.6648 log loss is the benchmark Model v1 must beat.**
+
+**Effect on Singapore Stage 1:** `run_stage.py` now defaults to scale 1100.
+The best ballot's P(≥5) falls from 37% (overconfident scale) to about 17.5%.
+Treat 17.5% as pessimistic: the fitted curve mixes BO1 and BO3 results (the
+data doesn't record format), and the simulator then makes BO1s even flatter,
+so BO1 randomness is probably counted twice. Model v1's BO1/BO3 check
+addresses this.
+
+---
+
 ## Open questions for the user (answer whenever you review)
 
 1. Confirm the Stage 1 team list and round 1 pairings from the official
    bracket or in-game Pick'Em once they're published.
-2. Factor discussion: which factors do you want in Model v1? (Starting
-   proposal is in the project's chat history; to be recorded here as
-   decision 0005.)
+2. ~~Factor discussion~~ Done: decision 0005.
 3. Are you OK with the network policy as is (no Liquipedia)? Or should we add
    it for brackets and rosters, accepting its API terms?
 
 ## Next steps (proposed)
 
-- **Step 5:** measure Baseline 0 on past matches (calibration, log loss) and
-  fit its scale parameter. This includes past Major Swiss matches.
-- **Step 6:** factor discussion → Model v1 (own rating with time decay, roster
-  continuity, LAN weighting), compared against Baseline 0 on the same
-  held-out matches.
+- **Step 6:** Model v1 with the factors in decision 0005, each tested
+  against the 0.6648 benchmark on the same held-out matches; BO1/BO3 check
+  on past Major Swiss matches.
 - **Step 7:** strength-uncertainty sampler; backtest ballots on past Majors.
 - **Later:** map/veto model (needs map-level data), Stages 2–3 and playoffs,
   a web page.

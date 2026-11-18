@@ -34,7 +34,7 @@ def main():
     ap.add_argument("event", type=Path)
     ap.add_argument("--sims", type=int, default=100_000, help="simulations used to search for ballots")
     ap.add_argument("--confirm-sims", type=int, default=100_000, help="fresh simulations used to re-grade finalists")
-    ap.add_argument("--scale", type=float, default=400.0, help="Elo scale; larger = closer to 50/50")
+    ap.add_argument("--scale", type=float, default=1100.0, help="Elo scale; larger = closer to 50/50 (1100 = fitted on past top-50 matches, Step 5)")
     ap.add_argument("--seed", type=int, default=2026)
     args = ap.parse_args()
 
