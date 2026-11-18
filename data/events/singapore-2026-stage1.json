@@ -1,0 +1,225 @@
+{
+  "event": "PGL Major Singapore 2026",
+  "stage": "Stage 1",
+  "status": "PROVISIONAL - verify team list and seeds against the official bracket before locking picks",
+  "dates_reported": "2026-11-24 to 2026-11-27 (news reports; not confirmed from an official source)",
+  "rules": "Valve Major Supplemental Rulebook, ValveSoftware/counter-strike_rules_and_regs @ 621b7d9",
+  "seeding_method": "Stage 1 seeds follow VRS global standing (rulebook: Pre-event Seeding). Seeds below are the 16 reported Stage 1 teams sorted by the 2026-11-02 VRS global standings (ValveSoftware/counter-strike_regional_standings @ f8c55f2).",
+  "verification_notes": [
+    "Team list taken from win.gg's event guide; insider-gaming.com and Wikipedia gave partial/conflicting lists.",
+    "Cross-check: this seeding implies Round 1 HEROIC vs Imperial (3v11) and FaZe vs Wildcard (4v12), matching the pairings insider-gaming.com reported.",
+    "Other 6 Round 1 pairings not yet confirmed.",
+    "Chinggis Warriors has two rosters in the VRS standings (ranks 55 and 263); the higher-ranked one is used here. Confirm which roster attends."
+  ],
+  "teams": [
+    {
+      "seed": 1,
+      "name": "Ninjas in Pyjamas",
+      "vrs_global_rank": 15,
+      "vrs_points": 1564,
+      "roster": [
+        "adamb",
+        "Krimbo",
+        "sjuush",
+        "stavn",
+        "xKacpersky"
+      ]
+    },
+    {
+      "seed": 2,
+      "name": "PARIVISION",
+      "vrs_global_rank": 16,
+      "vrs_points": 1560,
+      "roster": [
+        "FL1T",
+        "HObbit",
+        "Jame",
+        "xiELO",
+        "zweih"
+      ]
+    },
+    {
+      "seed": 3,
+      "name": "HEROIC",
+      "vrs_global_rank": 18,
+      "vrs_points": 1548,
+      "roster": [
+        "Brollan",
+        "Chr1zN",
+        "MartinezSa",
+        "nilo",
+        "susp"
+      ]
+    },
+    {
+      "seed": 4,
+      "name": "FaZe",
+      "vrs_global_rank": 20,
+      "vrs_points": 1539,
+      "roster": [
+        "frozen",
+        "JBOEN",
+        "jcobbb",
+        "Neityu",
+        "Twistzz"
+      ]
+    },
+    {
+      "seed": 5,
+      "name": "Liquid",
+      "vrs_global_rank": 21,
+      "vrs_points": 1528,
+      "roster": [
+        "EliGE",
+        "Jorko",
+        "JT",
+        "malbsMd",
+        "NAF"
+      ]
+    },
+    {
+      "seed": 6,
+      "name": "Eternal Fire",
+      "vrs_global_rank": 22,
+      "vrs_points": 1513,
+      "roster": [
+        "jottAAA",
+        "Kvem",
+        "MisteM",
+        "regali",
+        "soulfly"
+      ]
+    },
+    {
+      "seed": 7,
+      "name": "100 Thieves",
+      "vrs_global_rank": 23,
+      "vrs_points": 1511,
+      "roster": [
+        "device",
+        "Gizmy",
+        "poiii",
+        "rain",
+        "sirah"
+      ]
+    },
+    {
+      "seed": 8,
+      "name": "9z",
+      "vrs_global_rank": 24,
+      "vrs_points": 1490,
+      "roster": [
+        "dgt",
+        "HUASOPEEK",
+        "luchov",
+        "max",
+        "meyern"
+      ]
+    },
+    {
+      "seed": 9,
+      "name": "M80",
+      "vrs_global_rank": 25,
+      "vrs_points": 1489,
+      "roster": [
+        "JBa",
+        "Lake",
+        "s1n",
+        "slaxz-",
+        "Swisher"
+      ]
+    },
+    {
+      "seed": 10,
+      "name": "DENDELE",
+      "vrs_global_rank": 29,
+      "vrs_points": 1466,
+      "roster": [
+        "doc",
+        "gafolo",
+        "koala",
+        "maxxkor",
+        "rdnzao"
+      ]
+    },
+    {
+      "seed": 11,
+      "name": "Imperial",
+      "vrs_global_rank": 35,
+      "vrs_points": 1406,
+      "roster": [
+        "chelo",
+        "decenty",
+        "noway",
+        "saadzin",
+        "VINI"
+      ]
+    },
+    {
+      "seed": 12,
+      "name": "Wildcard",
+      "vrs_global_rank": 38,
+      "vrs_points": 1391,
+      "roster": [
+        "Cxzi",
+        "fr3nd",
+        "HexT",
+        "nEMANHA",
+        "reck"
+      ]
+    },
+    {
+      "seed": 13,
+      "name": "BC.Game",
+      "vrs_global_rank": 45,
+      "vrs_points": 1337,
+      "roster": [
+        "asap",
+        "Magisk",
+        "mzinho",
+        "s1mple",
+        "Senzu"
+      ]
+    },
+    {
+      "seed": 14,
+      "name": "FlyQuest",
+      "vrs_global_rank": 48,
+      "vrs_points": 1318,
+      "roster": [
+        "aliStair",
+        "INS",
+        "jks",
+        "nettik",
+        "Vexite"
+      ]
+    },
+    {
+      "seed": 15,
+      "name": "Chinggis Warriors",
+      "vrs_global_rank": 55,
+      "vrs_points": 1272,
+      "roster": [
+        "cool4st",
+        "fury5k",
+        "ROUX",
+        "sk0R",
+        "tikuak"
+      ]
+    },
+    {
+      "seed": 16,
+      "name": "Lynn Vision",
+      "vrs_global_rank": 56,
+      "vrs_points": 1267,
+      "roster": [
+        "C4LLM3SU3",
+        "EmiliaQAQ",
+        "Starry",
+        "Westmelon",
+        "z4KR"
+      ]
+    }
+  ],
+  "completed_matches": []
+}
