@@ -111,6 +111,55 @@ teams.
 
 ---
 
+## 2026-11-18, Step 3b: Factor decisions for Model v1
+
+The user chose from options with analysis (two rounds of questions). Full
+record: [decision 0005](decisions/0005-model-v1-factors.md). In short:
+own rating + VRS points (fitted blend); roster-change reset; BO1 vs BO3;
+LAN weighting; event-strength weighting; region calibration; strength
+uncertainty; a per-team curve against stronger/weaker opponents (the user's
+idea); player ratings only after roster changes, if HLTV data is collected.
+Every factor must improve predictions on held-out past matches or it's removed.
+
+**Correction made while preparing the options:** Valve's tables show LAN
+and event strength only for a roster's ten best wins and never record
+BO1/BO3, so those factors are only partly supported by the data.
+
+**Open:** the user is trying to connect a folder from their computer so their
+logged-in browser can read a few HLTV pages (map pools, player ratings).
+
+---
+
+## 2026-11-18, Step 4: Match history from Valve's VRS snapshots
+
+**Done:** `scripts/fetch_vrs.sh` downloads Valve's repository at a pinned
+commit (`f8c55f2`, the 2026-11-02 standings). `pickem/data/vrs.py` parses
+every roster page of all 48 snapshots, and `scripts/build_matches.py` writes
+`data/processed/matches.csv` and `data/processed/vrs_points.csv`.
+Regenerate with the two scripts; the outputs aren't committed.
+
+**Result:** 26,631 matches, 2024-02-08 to 2026-11-01. Both lineups known
+for 89%, LAN status known for 77%, event weight known for 79%.
+
+**Problem found and fixed:** the first version matched the same match
+across overlapping snapshots by team names and counted about 10,800
+matches twice (37,399 rows). Valve relabels old matches when a team is
+renamed ("PERA" later appears as "ex-PERA"). Now each match is taken from
+the first snapshot after it was played, with a 14-day allowance for late
+entries. LAN and event flags are still filled in from any snapshot. After
+the fix, only 1 pair of rows shares a date and both lineups under different
+names.
+
+**Checked:** 802 cases of the same two teams meeting twice on one day. 793
+come from a single snapshot with distinct Valve match IDs (genuine, e.g.
+double-elimination brackets) and 297 have different winners, so they're kept.
+
+**Known limitations:** no maps, scores, BO format or event names; team
+names reflect the name shortly after each match, so a renamed team's history
+is split across names (handled in the model by linking lineups).
+
+---
+
 ## Open questions for the user (answer whenever you review)
 
 1. Confirm the Stage 1 team list and round 1 pairings from the official
@@ -123,8 +172,6 @@ teams.
 
 ## Next steps (proposed)
 
-- **Step 4:** parse the VRS per-roster match tables into one deduplicated
-  match history (one row per match ID).
 - **Step 5:** measure Baseline 0 on past matches (calibration, log loss) and
   fit its scale parameter. This includes past Major Swiss matches.
 - **Step 6:** factor discussion → Model v1 (own rating with time decay, roster
