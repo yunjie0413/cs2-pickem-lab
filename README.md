@@ -19,10 +19,27 @@ P(A beats B), BO1/BO3  -->  Valve Swiss rules, played  --> grade every candidate
 
 ## Run it
 
-Requires Python 3.11+ and numpy (`pip install numpy pytest`).
+Requires Python 3.11+ and numpy (`pip install numpy pytest`). Works on
+Windows, macOS and Linux.
+
+Once, to download Valve's data (~300 MB, not committed) and build the match list:
+
+```bash
+python scripts/fetch_vrs.py
+```
+
+```bash
+python scripts/build_matches.py
+```
+
+Then:
 
 ```bash
 python scripts/run_stage.py data/events/singapore-2026-stage1.json
+```
+
+```bash
+python scripts/eval_baseline.py
 ```
 
 ```bash

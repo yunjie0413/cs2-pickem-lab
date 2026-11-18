@@ -1,7 +1,7 @@
 """Build the match history and VRS points history from Valve's VRS snapshots.
 
 Usage:
-    ./scripts/fetch_vrs.sh               # once: downloads data/raw/vrs
+    python scripts/fetch_vrs.py          # once: downloads data/raw/vrs
     python scripts/build_matches.py
 
 Writes:
@@ -35,7 +35,7 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
 
     per_snapshot = []
-    with open(args.out / "vrs_points.csv", "w", newline="") as fp:
+    with open(args.out / "vrs_points.csv", "w", newline="", encoding="utf-8") as fp:
         w = csv.writer(fp)
         w.writerow(["snapshot", "team", "roster", "global_rank", "region", "points"])
         for snap, folder in vrs.snapshot_dirs(args.vrs):
@@ -46,7 +46,7 @@ def main():
             print(f"  {snap}: {len(pages)} rosters", file=sys.stderr)
 
     history = vrs.build_history(per_snapshot)
-    with open(args.out / "matches.csv", "w", newline="") as fp:
+    with open(args.out / "matches.csv", "w", newline="", encoding="utf-8") as fp:
         w = csv.writer(fp)
         w.writerow(["date", "winner", "loser", "winner_roster", "loser_roster", "lan", "event_weight", "snapshot"])
         for m in history:

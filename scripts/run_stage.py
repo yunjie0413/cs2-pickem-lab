@@ -38,7 +38,7 @@ def main():
     ap.add_argument("--seed", type=int, default=2026)
     args = ap.parse_args()
 
-    event = json.loads(args.event.read_text())
+    event = json.loads(args.event.read_text(encoding="utf-8"))
     teams_info = sorted(event["teams"], key=lambda t: t["seed"])
     teams = [t["name"] for t in teams_info]
     p_bo1, p_bo3 = matrices_from_points([t["vrs_points"] for t in teams_info], scale=args.scale)

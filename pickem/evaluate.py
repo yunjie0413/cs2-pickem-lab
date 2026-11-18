@@ -76,7 +76,7 @@ def _roster(text: str) -> Roster | None:
 
 def load_matches(path: Path) -> list[MatchRecord]:
     out = []
-    with open(path, newline="") as fp:
+    with open(path, newline="", encoding="utf-8") as fp:
         for r in csv.DictReader(fp):
             out.append(MatchRecord(
                 date=date.fromisoformat(r["date"]),
@@ -99,7 +99,7 @@ class PointsHistory:
 
     def __init__(self, path: Path):
         self.by_snap: dict[date, list[tuple[str, frozenset, float, int]]] = defaultdict(list)
-        with open(path, newline="") as fp:
+        with open(path, newline="", encoding="utf-8") as fp:
             for r in csv.DictReader(fp):
                 if r["points"]:
                     self.by_snap[date.fromisoformat(r["snapshot"])].append((

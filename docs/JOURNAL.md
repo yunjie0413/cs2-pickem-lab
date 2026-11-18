@@ -132,7 +132,7 @@ logged-in browser can read a few HLTV pages (map pools, player ratings).
 
 ## 2026-11-18, Step 4: Match history from Valve's VRS snapshots
 
-**Done:** `scripts/fetch_vrs.sh` downloads Valve's repository at a pinned
+**Done:** `scripts/fetch_vrs.py` (originally a bash script, see Step 5b) downloads Valve's repository at a pinned
 commit (`f8c55f2`, the 2026-11-02 standings). `pickem/data/vrs.py` parses
 every roster page of all 48 snapshots, and `scripts/build_matches.py` writes
 `data/processed/matches.csv` and `data/processed/vrs_points.csv`.
@@ -193,13 +193,35 @@ addresses this.
 
 ---
 
+## 2026-11-18, Step 5b: Moved to the user's Windows PC
+
+**Why:** a local session can use the user's own Chrome (logged into HLTV)
+and isn't blocked from sites like Liquipedia. The cloud session was moved
+over with `claude --teleport`; all work had already been pushed.
+
+**Fixes needed for Windows:**
+- Every file read/write now names UTF-8 explicitly. Windows on a Chinese
+  system defaults to GBK, which would garble or crash on player names.
+- `scripts/fetch_vrs.sh` (bash) replaced by `scripts/fetch_vrs.py`, which
+  also enables long paths for Git on Windows.
+
+**Check:** on the PC, the rebuilt match list (26,631 matches), all 31 tests
+and the Step 5 evaluation (log loss 0.6648) match the cloud results exactly.
+
+**User decision:** collect HLTV data for the current Stage 1 teams *and* for
+past Majors, so map and player factors can be tested on past events like
+everything else (accepting more pages and more terms-of-service risk on the
+user's account). Plan in Step 6a.
+
+---
+
 ## Open questions for the user (answer whenever you review)
 
 1. Confirm the Stage 1 team list and round 1 pairings from the official
    bracket or in-game Pick'Em once they're published.
 2. ~~Factor discussion~~ Done: decision 0005.
-3. Are you OK with the network policy as is (no Liquipedia)? Or should we add
-   it for brackets and rosters, accepting its API terms?
+3. ~~Network policy / Liquipedia~~ No longer relevant: the project now runs
+   on the user's PC, where Liquipedia is reachable.
 
 ## Next steps (proposed)
 
