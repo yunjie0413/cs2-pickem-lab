@@ -44,6 +44,8 @@ def main():
     ap.add_argument("--sigma", type=float, default=None,
                     help="Model v1 only: spread of each team's strength per simulated stage (blend-logit units; "
                          "default: data/processed/uncertainty.json, 0 if absent)")
+    ap.add_argument("--no-recent", action="store_true",
+                    help="Model v1 only: ignore HLTV results newer than Valve's match list (Step 9b)")
     args = ap.parse_args()
 
     event = json.loads(args.event.read_text(encoding="utf-8"))
@@ -55,7 +57,7 @@ def main():
         model_label = f"Baseline 0 (VRS points, Elo scale {args.scale:g})"
     else:
         from pickem.predict import event_matrices, load_model
-        eng, cfg = load_model(ROOT)
+        eng, cfg = load_model(ROOT, recent_for=None if args.no_recent else teams_info)
         bo_path = ROOT / "data/processed/bo_scales.json"
         bo = json.loads(bo_path.read_text(encoding="utf-8")) if bo_path.exists() else {"bo3_scale": 1.0}
         on = date.fromisoformat(event.get("start_date", date.today().isoformat()))
@@ -77,6 +79,12 @@ def main():
             d1, d3 = marginal_check(logit, bo["bo3_scale"], sigma)
             model_label += (f"\n  single-match probabilities averaged over the strength draws differ from the "
                             f"fixed ones by at most {d1:.3f} (BO1) / {d3:.3f} (BO3)")
+        rec = cfg.get("recent")
+        if rec is not None:
+            model_label += (f"\n  HLTV results newer than Valve's match list: {len(rec.inputs)} matches used, "
+                            f"{len(rec.skipped)} skipped")
+            for line in rec.skipped:
+                model_label += f"\n    skipped: {line}"
         if missing:
             model_label += f"\n  WARNING: no match history found for {', '.join(missing)}"
         model_label += "\n  team ratings (matched in Valve's data as / matches played / last match):"

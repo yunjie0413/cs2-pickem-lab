@@ -16,9 +16,10 @@ happened. It found no detectable difference from Valve's points alone
 (Step 7c). Scored once on the test period (1,440 matches from 2025-11),
 Model v1 beats Valve's points by 0.011 ± 0.003 log loss per match.
 
-**Final Singapore Stage 1 picks** (journal Step 9; P(≥5 correct) ≈ 25%):
-3-0 PVISION, 100 Thieves | advance Ninjas in Pyjamas, HEROIC, FaZe,
-Eternal Fire, 9z, M80 | 0-3 GOSH, Chinggis Warriors.
+**Final Singapore Stage 1 picks** (journal Steps 9 and 9b, with November
+results from HLTV; P(≥5 correct) ≈ 25%):
+3-0 Liquid, 100 Thieves | advance Ninjas in Pyjamas, PVISION, HEROIC,
+FaZe, Eternal Fire, M80 | 0-3 GOSH, Chinggis Warriors.
 
 ## How it works
 
@@ -64,7 +65,9 @@ python scripts/fit_uncertainty.py
 ```
 
 Simulate a stage and choose a ballot (add `--model baseline` for Baseline 0,
-`--sigma X` to set the strength spread by hand):
+`--sigma X` to set the strength spread by hand). If the local file
+`data/raw/hltv/results_recent.csv` exists, the event teams' HLTV results
+newer than Valve's match list are included; `--no-recent` leaves them out:
 
 ```bash
 python scripts/run_stage.py data/events/singapore-2026-stage1.json
@@ -105,6 +108,7 @@ pickem/predict.py          Model v1 -> BO1/BO3 win probabilities for an event
 pickem/evaluate.py         Scores: log loss, Brier, calibration; VRS points lookup
 pickem/data/vrs.py         Parser for Valve's VRS snapshot pages
 pickem/data/hltv.py        HLTV map list -> series (BO1/BO3/BO5) -> links to Valve's matches
+pickem/data/hltv_recent.py HLTV results newer than Valve's match list, as engine matches
 data/events/               Event files: teams, seeds, rosters, completed matches
 scripts/run_stage.py       End-to-end run for one event file
 scripts/backtest_majors.py Replay past Major Stage 1s and grade the ballots

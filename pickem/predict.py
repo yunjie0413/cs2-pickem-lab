@@ -15,8 +15,11 @@ from pathlib import Path
 import numpy as np
 
 from .baseline import map_from_bo3
+from .data.hltv_recent import hltv_to_valve_names, load_rows, recent_inputs
 from .history import load_history
 from .model_v1 import LN10_400, Engine, Params
+
+RECENT_FILE = "data/raw/hltv/results_recent.csv"
 
 
 def load_config(root: Path) -> tuple[Params, dict]:
@@ -25,12 +28,26 @@ def load_config(root: Path) -> tuple[Params, dict]:
     return params, cfg
 
 
-def load_model(root: Path, before: date | None = None) -> tuple[Engine, dict]:
-    """Engine with every past match processed (only matches before `before`, if given, for backtests)."""
+def load_model(root: Path, before: date | None = None, recent_for: list[dict] | None = None) -> tuple[Engine, dict]:
+    """Engine with every past match processed (only matches before `before`, if given, for backtests).
+
+    recent_for: event-file teams. If given and the local HLTV results file
+    exists, their matches newer than Valve's match list are processed too
+    (Step 9b); what was used and skipped is in cfg["recent"].
+    """
     params, cfg = load_config(root)
     h = load_history(root, use_hltv=cfg.get("hltv_links", 0) > 0)
     eng = Engine(params, h.regions, h.players)
-    eng.run([m for m in h.inputs if before is None or m.date < before])
+    inputs = [m for m in h.inputs if before is None or m.date < before]
+    path = root / RECENT_FILE
+    if recent_for is not None and path.exists():
+        valve_names = {m.winner for m in h.matches} | {m.loser for m in h.matches}
+        rec = recent_inputs(load_rows(path), recent_for, hltv_to_valve_names(h.links, h.matches), valve_names,
+                            after=h.matches[-1].date)
+        rec.inputs = [m for m in rec.inputs if before is None or m.date < before]
+        inputs += rec.inputs
+        cfg["recent"] = rec
+    eng.run(inputs)
     return eng, cfg
 
 

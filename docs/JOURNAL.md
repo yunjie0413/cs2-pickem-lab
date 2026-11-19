@@ -922,6 +922,97 @@ deterministic: it repeated the earlier result, no factors kept and blend
   re-run `python scripts/run_stage.py data/events/singapore-2026-stage1.json`.
 - Otherwise the picks above stand.
 
+**Superseded the same day by Step 9b**, which adds the November matches.
+
+## 2026-11-19, Step 9b: November results from HLTV
+
+**User's question and choice:** "Aren't all matches on HLTV?" The user
+chose "Beijing + collect rest of November" over using only the Beijing
+maps we already had, or keeping the picks.
+
+**Why three weeks were missing:** the ratings run on Valve's match list,
+which Valve publishes once a month with each VRS snapshot. The newest one
+(2026-11-02) ends on 2026-11-01, and the next is due after the Major. Until
+now HLTV served only to label matches (LAN, BO1 or BO3).
+
+**Collection (user's Chrome, 2026-11-19):**
+- HLTV's results page, filtered by team and by 2026-11-02 to 2026-11-19,
+  for each of 15 Stage 1 teams. The pages were read 8–15 seconds apart, in
+  about 3.5 minutes.
+- GOSH has no HLTV team of that name. BC.Game's page and s1mple's
+  player page show no November matches, so GOSH hasn't played.
+- The rows are saved in `data/raw/hltv/results_recent.csv`, which is
+  gitignored and stays on the user's PC.
+- Dates come from each row's Unix timestamp. The page's day headings shift
+  with the browser's time zone, so they aren't used.
+- 34 rows give 27 distinct matches. Matches between two Stage 1 teams
+  appear on both pages and count once. DENDELE 3-0 Imperial (1 November,
+  23:22 UTC) is already in Valve's list, so it isn't counted again.
+
+**Who played:**
+- IEM Beijing (2–6 November, LAN): PARIVISION, Liquid, HEROIC, FaZe and 9z.
+- PGL Cluj-Napoca 2027 closed qualifier (15–17 November): PARIVISION,
+  HEROIC, FaZe, Eternal Fire and 100 Thieves.
+- Stake Ranked (17–18 November): NiP.
+- No matches since Valve's list: M80, DENDELE, Imperial, Wildcard, GOSH,
+  FlyQuest, Chinggis Warriors and Lynn Vision.
+
+**How the matches are used** (`pickem/data/hltv_recent.py`,
+`load_model(recent_for=...)`):
+- The engine processes them after Valve's list, in time order, exactly
+  like Valve's matches.
+- Stage 1 teams play with their event-file lineups.
+- Opponents are found by name in Valve's list: HLTV names are learned from
+  the linked LAN series, otherwise matched after normalising. All 27
+  matches resolved; none were skipped.
+- **The model itself is unchanged** (same settings); it just sees more
+  matches.
+- `run_stage.py` uses the file by default; `--no-recent` turns it off. The
+  backtest doesn't use it.
+
+**Effect:**
+
+| Team | Rating before | Rating after | Advance % before | Advance % after |
+|---|---|---|---|---|
+| 100 Thieves | 1976 | **2025** | 57.5 | **65.8** |
+| PVISION | 2044 | 2017 | 67.6 | 64.9 |
+| Ninjas in Pyjamas | 2039 | 2024 | 66.4 | 65.1 |
+| HEROIC | 2028 | 2014 | 64.9 | 64.0 |
+| FaZe | 2006 | 1961 | 62.1 | 56.5 |
+| Eternal Fire | 1993 | 1960 | 58.6 | 54.4 |
+| Liquid | 1951 | 1957 | 55.3 | 57.2 |
+| 9z | 2006 | **1956** | 59.0 | **52.9** |
+| M80 (no new matches) | 1976 | 1976 | 53.0 | 54.4 |
+
+What drove the changes:
+- 100 Thieves beat Eternal Fire, PARIVISION and fnatic in the qualifier.
+- 9z lost both Beijing series, to BetBoom and TYLOO.
+- FaZe won 0 of 4 series, the last two to fnatic and HEROIC.
+
+**New final ballot** (the two objectives now pick the same ballot):
+
+| Pick | Teams |
+|---|---|
+| 3-0 | **Liquid, 100 Thieves** |
+| Advance (3-1 or 3-2) | **Ninjas in Pyjamas, PVISION, HEROIC, FaZe, Eternal Fire, M80** |
+| 0-3 | **GOSH, Chinggis Warriors** |
+
+- P(≥5 correct) = 24.7%. Expected correct picks = 3.56.
+- Changes from Step 9: 9z is out. PVISION moves from 3-0 to advance, and
+  Liquid takes its 3-0 slot.
+
+**Caveats added:**
+- The qualifier and Stake Ranked matches were most likely played online.
+  A week before a Major, teams may hold back strategies or field
+  stand-ins.
+- Opponents' lineups are unknown; they are matched by name.
+- Region and the other Step 9 caveats still apply.
+
+**Before the lock:** along with the roster check on 2026-11-23, the
+November results can be collected again for matches played since 19
+November. That would be a new collection round and needs the user's OK.
+Then re-run `run_stage.py`.
+
 ---
 
 ## Open questions for the user (answer whenever you review)
