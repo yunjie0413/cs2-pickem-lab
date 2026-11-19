@@ -55,7 +55,7 @@ def main():
         sys.exit("no HLTV links: put the HLTV map file at data/raw/hltv/maps_lan_top50.csv")
     if cfg.get("hltv_links", 0) == 0:
         print("note: model_v1.json was fitted without HLTV; re-run scripts/fit_model_v1.py first\n")
-    eng = Engine(params, h.regions)
+    eng = Engine(params, h.regions, h.players)
     z = np.array([p.z for p in eng.run(h.inputs)])
     ph = PointsHistory(ROOT / "data/processed/vrs_points.csv")
     n_maps = sum(len(s.maps) for s in h.links.values())

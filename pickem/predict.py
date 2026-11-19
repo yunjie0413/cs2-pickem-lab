@@ -29,14 +29,19 @@ def load_model(root: Path) -> tuple[Engine, dict]:
     """Engine with every past match processed, exactly as when it was fitted."""
     params, cfg = load_config(root)
     h = load_history(root, use_hltv=cfg.get("hltv_links", 0) > 0)
-    eng = Engine(params, h.regions)
+    eng = Engine(params, h.regions, h.players)
     eng.run(h.inputs)
     return eng, cfg
 
 
 def team_state(eng: Engine, name: str, roster: list[str], on: date) -> dict:
-    """Effective rating, volatility and match count of an event team on a date."""
-    tid, _ = eng.find(name, frozenset(p.lower() for p in roster))
+    """Effective rating, volatility and match count of an event team on a date.
+
+    If the event roster differs from the team's latest lineup (a new signing
+    or a stand-in), the player-rating adjustment is applied as in the engine.
+    """
+    lineup = frozenset(p.lower() for p in roster)
+    tid, _ = eng.find(name, lineup)
     mu = eng.mean()
     if tid is None:
         return {"rating": mu, "vol": 0.0, "n": 0, "found": False}
@@ -44,10 +49,13 @@ def team_state(eng: Engine, name: str, roster: list[str], on: date) -> dict:
     rating = t.rating
     if t.last is not None and math.isfinite(eng.p.decay_days):
         rating = mu + (rating - mu) * math.exp(-max((on - t.last).days, 0) / eng.p.decay_days)
+    roster_adj = eng.p.roster_skill * eng.skill_change(tid, lineup, name, on)
     region = eng.region_of(t)
     offset = eng.region_offset[region] if region else 0.0
-    return {"rating": rating + offset, "vol": t.vol, "n": t.n, "played": t.played, "found": True,
-            "matched_as": t.name, "last_match": t.last}
+    return {"rating": rating + roster_adj + offset, "vol": t.vol, "n": t.n, "played": t.played, "found": True,
+            "matched_as": t.name, "last_match": t.last, "roster_adj": roster_adj,
+            "joined": sorted(lineup - t.lineup) if t.lineup else [],
+            "left": sorted(t.lineup - lineup) if t.lineup else []}
 
 
 def event_matrices(eng: Engine, cfg: dict, teams: list[dict], on: date, bo3_scale: float = 1.0,
@@ -60,7 +68,8 @@ def event_matrices(eng: Engine, cfg: dict, teams: list[dict], on: date, bo3_scal
     fits past BO1s as well as BO1s' own scale does); or sigmoid(bo1_scale x
     blend) if bo1_scale is given.
     """
-    states = [team_state(eng, t["name"], t["roster"], on) for t in teams]
+    # org_name: the name in Valve's data when the team plays under another name at this event
+    states = [team_state(eng, t.get("org_name", t["name"]), t["roster"], on) for t in teams]
     n = len(teams)
     p1, p3 = np.full((n, n), 0.5), np.full((n, n), 0.5)
     w_own, w_vrs = cfg["blend"]["own"], cfg["blend"]["vrs"]

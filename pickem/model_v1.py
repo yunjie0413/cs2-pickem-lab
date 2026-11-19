@@ -16,6 +16,13 @@ Factors (decision 0005) and the parameters that switch each one off:
   LAN weighting ........... w_lan = 1   (LAN status from HLTV only, see below)
   region calibration ...... k_region = 0
   per-team volatility ..... vol_rate = 0
+  player ratings on roster changes ... roster_skill = 0   (HLTV player values, Step 7a)
+
+Player ratings are used only when a team's lineup changes (decision 0005):
+the rating moves by roster_skill x (summed value of the players who joined
+minus that of the players who left), values from HLTV ratings in the months
+before the match (pickem/data/hltv_players.py). New teams still start at
+the average.
 
 Two kinds of adjustment for inactivity and lineup changes:
   - pull the rating part of the way toward the average (decay_days,
@@ -62,6 +69,7 @@ class Params:
     k_region: float = 0.0        # learning rate of region offsets
     vol_rate: float = 0.0        # learning rate of per-team volatility
     vol_shrink: float = 0.05     # pull of volatility back toward 0 at each update
+    roster_skill: float = 0.0    # rating points per unit of player value gained in a lineup change
 
     def without(self, factor: str) -> "Params":
         """Same parameters with one factor switched off (for ablation tests)."""
@@ -71,6 +79,7 @@ class Params:
             "lan": {"w_lan": 1.0},
             "region": {"k_region": 0.0},
             "volatility": {"vol_rate": 0.0},
+            "roster_skill": {"roster_skill": 0.0},
         }[factor]
         return replace(self, **off)
 
@@ -115,9 +124,10 @@ def _norm(lineup: Sequence[str] | None) -> frozenset[str] | None:
 
 
 class Engine:
-    def __init__(self, params: Params, regions: dict[str, str] | None = None):
+    def __init__(self, params: Params, regions: dict[str, str] | None = None, players=None):
         self.p = params
         self.regions = regions or {}           # team name -> region (from VRS pages)
+        self.players = players                 # has .value(nick, team, on); None = no player data
         self.teams: list[Team] = []
         self.by_name: dict[str, int] = {}
         self.by_player: dict[str, int] = {}
@@ -198,6 +208,21 @@ class Engine:
             if p.roster_new > 0:
                 t.n *= 1 - p.roster_new * frac
 
+    def skill_change(self, tid: int, lineup: frozenset[str] | None, name: str, d: date) -> float:
+        """Summed player value of those who joined minus those who left (0 when unknown).
+
+        Compared with the team's latest lineup, so a stand-in counts when he
+        comes in and again (reversed) when the regular player returns.
+        """
+        t = self.teams[tid]
+        if not (self.p.roster_skill and self.players and lineup and t.lineup):
+            return 0.0
+        joined, left = lineup - t.lineup, t.lineup - lineup
+        if not joined and not left:
+            return 0.0
+        v = self.players.value
+        return sum(v(p, name, d) for p in joined) - sum(v(p, t.name, d) for p in left)
+
     def _k(self, t: Team) -> float:
         return self.p.k * (1 + (self.p.k_new - 1) * math.exp(-t.n / 10))
 
@@ -210,9 +235,15 @@ class Engine:
         b, cb = self.resolve(m.loser, lb)
         if a == b:  # both sides resolved to one team (bad data); treat the loser as new
             b, cb = self._new_team(m.loser), 0
+        skill_a = self.skill_change(a, la, m.winner, m.date)
+        skill_b = self.skill_change(b, lb, m.loser, m.date)
         self._prepare(a, ca, m.date)
         self._prepare(b, cb, m.date)
         A, B = self.teams[a], self.teams[b]
+        if skill_a:
+            self._set(A, A.rating + self.p.roster_skill * skill_a)
+        if skill_b:
+            self._set(B, B.rating + self.p.roster_skill * skill_b)
         ra, rb = self.effective(A), self.effective(B)
         z = LN10_400 * (ra - rb) * math.exp(-(A.vol + B.vol))
         pred = Prediction(m.date, a, b, z, ra, rb, round(A.n), round(B.n))

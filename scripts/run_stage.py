@@ -68,6 +68,10 @@ def main():
             if s["found"]:
                 model_label += (f"\n    {t['name']:<20} {s['rating']:7.0f}  as {s['matched_as']!r}, "
                                 f"{s['played']} matches, last {s['last_match']}")
+                if s.get("joined") or s.get("left"):
+                    model_label += (f"\n    {'':<20} lineup differs from its last match: in "
+                                    f"{', '.join(s['joined']) or '-'}, out {', '.join(s['left']) or '-'} "
+                                    f"({s['roster_adj']:+.0f} rating from player ratings)")
     name_to_idx = {n: i for i, n in enumerate(teams)}
     fixed = {}
     for m in event.get("completed_matches", []):

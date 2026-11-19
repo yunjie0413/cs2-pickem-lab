@@ -479,6 +479,117 @@ Wikipedia (rosters, round 1, team names), HLTV match pages (round 1).
 
 ---
 
+## 2026-11-18, Step 7a: HLTV player ratings for roster changes
+
+**Order agreed with the user:** player ratings → Step 7 → map model.
+
+**Data:** HLTV's player statistics table, one page per calendar month from
+2024-02 to 2026-11 (up to 11-17), each read twice: against all opponents,
+and against top-50 opponents only (HLTV's ranking at the time of the
+match). 68 pages, read in the user's Chrome one page every 8–15 seconds,
+no errors, the same columns on every page: 65,516 rows (285 to 1,877 per
+page). Saved as one CSV with the user's OK and moved to
+`data/raw/hltv/players_monthly.csv` (gitignored). HLTV shows Rating 3.0
+for every month, so the whole series uses one scale.
+
+**Name matching:** Valve's lineups give nicknames only. They are matched to
+HLTV players by lowercase name; when two HLTV players share a name, the one
+who played for a team of the same name wins, then the one with more rounds.
+99.7% of player appearances for VRS top-100 teams in training + validation
+find an HLTV player (1,047 of 1,053 players; the 6 misses are minor
+players).
+
+**How often lineups change** (Valve's data, training + validation): in 10%
+of team appearances (2,067 changes). 1,608 of them change one player, 403
+two, 56 three or more; 521 go straight back to the lineup before (a one-off
+stand-in).
+
+**Method, as first fixed before any result** (`pickem/data/hltv_players.py`):
+- A player's value on a date uses only the 6 calendar months before that
+  date's month.
+- The value is the rating against top-50 opponents, because ratings
+  against weak opponents are inflated, pulled toward a prior (500 rounds,
+  about 25 maps, weigh as much as the prior). Players with few such rounds
+  were to be filled in from the rating against all opponents, translated by
+  a straight line fitted on player-months with at least 300 rounds of both
+  (training months only).
+- **Factor `roster_skill`:** when a team's lineup changes, its rating moves
+  by β × (summed value of the players who joined − summed value of those
+  who left). A stand-in counts when he comes in and is reversed when the
+  regular player returns. New teams still start at the average (decision
+  0005: player ratings only after roster changes). The same adjustment is
+  applied at prediction time when an event roster differs from the team's
+  last lineup (9z's stand-in).
+- Tested like every other factor: β tuned on the training period, kept only
+  if it helps on all validation matches by more than 2 standard errors.
+
+**The first rule failed a data check, before the factor test was run.**
+The fitted line was top-50 rating = 0.001 + 0.980 × all-opponent rating,
+almost no change: for players with plenty of both kinds of rounds, most of
+their "all" rounds *are* top-50 rounds, so the line can't show the
+inflation. Result: 9z's stand-in history (735 rounds in May–October 2026,
+none against top-50 teams, rating 1.23) got a value of 1.12, about frozen's
+or Twistzz's level. Two measurements on training months, from the player
+file only (no match results), replaced the rule:
+1. Players who faced both kinds of opponents in the same 6 months rated
+   **+0.088** higher against non-top-50 teams (4,619 player-windows), and
+   about the same gap at every mix (+0.086 to +0.094 whether 0–20% or
+   60–80% of their rounds were against top-50 teams).
+2. 115 players moved up: a 6-month window with under 100 top-50 rounds and
+   at least 300 others, then at least 200 top-50 rounds in the next 6
+   months. Their later top-50 rating averaged **0.96** whatever they had
+   shown before (correlation with their earlier rating 0.14; the 12 who had
+   been above 1.2 ended at 0.93). This is the stand-in / new-signing case.
+
+New rule: value = (0.96 × 500 + top-50 rating × top-50 rounds + w × other
+rounds × (other rating − 0.088)) / (500 + top-50 rounds + w × other rounds),
+with the weight w and the prior 0.96 fitted on the 115 players by least
+squares. **w came out 0.00**: the fit is flat from 0 to 0.10 (error 0.1262
+to 0.1266) and worse above, and even the best version barely beats a
+constant (error 0.126 against a spread of 0.128). In effect a player's
+value is his rating against top-50 opponents pulled toward 0.96, and
+ratings against weaker opponents are not used. history's value is now
+0.960 (meyern's 0.940).
+
+**Which matches count as "just after a lineup change"** (printed for
+information only): first planned as within 60 days of a change, but that
+covered 87% of validation matches because lineups change so often, so it is
+within 5 matches of a change instead.
+
+**Factor test, one-at-a-time rule as written** (each factor switched off
+from the all-factors model, the rest re-tuned on training; gain on all
+1,694 validation matches):
+
+| Factor | Gain, player ratings in the model | Step 6 (no player ratings) |
+|---|---|---|
+| time decay | −0.0008 ± 0.0010 | +0.0039 ± 0.0013, kept |
+| roster reset | −0.0018 ± 0.0011 | +0.0023 ± 0.0015 |
+| region | +0.0019 ± 0.0009, kept | +0.0054 ± 0.0014, kept |
+| volatility | −0.0009 ± 0.0013 | −0.0022 ± 0.0015 |
+| player ratings (β) | +0.0023 ± 0.0018 | not available |
+
+All factors in: validation log loss 0.6587 (Step 6: 0.6619). β tuned to
+800 rating points per unit of player value (1,600 was tried and was
+worse); on matches within 5 matches of a lineup change (764) its gain is
++0.0022 ± 0.0033.
+
+**Problem with the rule, not with the data:** time decay (learn faster
+after a break) and player ratings both handle "this team just changed", so
+each looks useless while the other is in the model, and testing one at a
+time dropped both, leaving region only. This is a known weakness of
+one-at-a-time tests when two factors overlap. Which selection rule decides
+is the user's call; asked before running any alternative, so the choice
+can't follow from which factors it keeps.
+
+**User's choice: backward elimination** (decision 0007). Implemented in
+`scripts/fit_model_v1.py` step [2]. **Not yet run** (usage limit reached):
+next, run the fit, record which factors survive, then re-run the format
+check and Stage 1 if the model changed. Note: the last fit run (one-at-a-
+time rule) overwrote `data/processed/model_v1.json` with the region-only
+model, so re-run the fit before `run_stage.py`.
+
+---
+
 ## Open questions for the user (answer whenever you review)
 
 1. ~~Confirm the Stage 1 bracket~~ Done: Step 6d.

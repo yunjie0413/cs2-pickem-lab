@@ -16,10 +16,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .data.hltv import Series, group_series, link_series, load_maps
+from .data.hltv_players import PlayerRatings, load_players
 from .evaluate import load_matches
 from .model_v1 import MatchIn
 
 HLTV_FILE = "data/raw/hltv/maps_lan_top50.csv"
+PLAYERS_FILE = "data/raw/hltv/players_monthly.csv"
 
 
 @dataclass
@@ -29,6 +31,7 @@ class History:
     regions: dict[str, str]       # team name -> VRS region (most frequent)
     links: dict[int, Series]      # match index -> HLTV series (LAN, both teams HLTV top 50)
     hltv_series: int              # series in the HLTV file (0 = no file used)
+    players: PlayerRatings | None = None  # HLTV player ratings by month (None = no file)
 
 
 def load_regions(root: Path) -> dict[str, str]:
@@ -51,4 +54,6 @@ def load_history(root: Path, use_hltv: bool = True) -> History:
         links = link_series(series, matches)
     inputs = [MatchIn(m.date, m.winner, m.loser, m.winner_roster, m.loser_roster, True if i in links else None)
               for i, m in enumerate(matches)]
-    return History(matches, inputs, load_regions(root), links, n_series)
+    ppath = root / PLAYERS_FILE
+    players = load_players(ppath) if (use_hltv and ppath.exists()) else None
+    return History(matches, inputs, load_regions(root), links, n_series, players)

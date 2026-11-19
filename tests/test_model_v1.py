@@ -136,6 +136,43 @@ def test_roster_change_brings_back_part_of_the_new_team_boost():
     assert eng.teams[tid].n == pytest.approx(20 * (1 - 0.5 * 2 / 5))
 
 
+class FakePlayers:
+    def __init__(self, values):
+        self.values = values
+
+    def value(self, nick, team, on):
+        return self.values.get(nick, 1.0)
+
+
+def test_player_ratings_move_the_rating_on_a_lineup_change_and_back_for_a_stand_in():
+    players = FakePlayers({"a5": 1.00, "s1": 0.80})
+    eng = Engine(Params(roster_skill=300.0, decay_days=math.inf), players=players)
+    eng.process(match("A", "B"))
+    tid = eng.by_name["A"]
+    before = eng.teams[tid].rating
+    stand_in = ("a1", "a2", "a3", "a4", "s1")
+    assert eng.skill_change(tid, frozenset(stand_in), "A", D0) == pytest.approx(-0.20)
+    eng.process(match("A", "C", d=D0 + timedelta(days=1), wl=stand_in, ll=("c1", "c2", "c3", "c4", "c5")))
+    # the -60 point adjustment came before this match's update: check it through the prediction
+    t = eng.teams[tid]
+    assert eng.skill_change(tid, frozenset(L1), "A", D0) == pytest.approx(+0.20)  # a5 returns: reversed
+    off = Engine(Params(decay_days=math.inf), players=players)
+    off.process(match("A", "B"))
+    assert off.skill_change(off.by_name["A"], frozenset(stand_in), "A", D0) == 0.0  # factor off
+    assert t.rating != before
+
+
+def test_player_rating_adjustment_size():
+    players = FakePlayers({"a5": 1.00, "n1": 1.25})
+    eng = Engine(Params(roster_skill=400.0, decay_days=math.inf, k=0.0001), players=players)
+    eng.process(match("A", "B"))
+    tid = eng.by_name["A"]
+    before = eng.teams[tid].rating
+    eng.process(match("B", "A", d=D0 + timedelta(days=1), wl=L2, ll=("a1", "a2", "a3", "a4", "n1")))
+    # with a tiny update size, the change is almost all from the lineup change: 400 x 0.25 = 100
+    assert eng.teams[tid].rating - before == pytest.approx(100.0, abs=0.5)
+
+
 def test_new_teams_start_at_the_current_average():
     eng = Engine(Params(k_new=8.0, decay_days=200, roster_reset=0.3))
     for i in range(30):  # uneven update sizes: the average drifts away from MEAN

@@ -50,18 +50,23 @@ GRID = {
     "k_region": [0.0, 1.0, 2.0, 4.0, 8.0],
     "vol_rate": [0.0, 0.02, 0.05, 0.1],
     "vol_shrink": [0.02, 0.05, 0.1],
+    "roster_skill": [0.0, 100.0, 200.0, 400.0, 800.0],
 }
 BOUNDS = {"k": (1, 1000), "k_new": (1, 100), "decay_days": (1, math.inf), "forget_days": (1, math.inf),
           "roster_reset": (0, 1), "roster_new": (0, 1), "w_lan": (0.05, 20), "k_region": (0, 100),
-          "vol_rate": (0, 1), "vol_shrink": (0, 1)}
-GEOMETRIC = {"k", "k_new", "decay_days", "forget_days", "w_lan", "k_region", "vol_rate", "vol_shrink"}
+          "vol_rate": (0, 1), "vol_shrink": (0, 1), "roster_skill": (0, 5000)}
+GEOMETRIC = {"k", "k_new", "decay_days", "forget_days", "w_lan", "k_region", "vol_rate", "vol_shrink",
+             "roster_skill"}
 FACTOR_PARAMS = {  # parameters frozen when a factor is switched off
     "time_decay": ["decay_days", "forget_days"],
     "roster_reset": ["roster_reset", "roster_new"],
     "lan": ["w_lan"],
     "region": ["k_region"],
     "volatility": ["vol_rate", "vol_shrink"],
+    "roster_skill": ["roster_skill"],
 }
+CHANGE_MATCHES = 5  # "just after a lineup change": either team is within 5 matches of one
+                    # (a 60-day window covered 87% of validation matches: lineups change often)
 CLEAR = 2.0  # a factor is kept only if it helps by more than 2 standard errors
 MIN_GAIN = 2e-5  # a search step must improve log loss by this much (else flat
                  # directions drift: new_rating once slid to its bound for a 0.00001 gain)
@@ -89,6 +94,7 @@ class Scorer:
         ra = [h.regions.get(m.winner) for m in h.matches]
         rb = [h.regions.get(m.loser) for m in h.matches]
         cross = np.array([a is not None and b is not None and a != b for a, b in zip(ra, rb)])
+        recent = self._recent_changes()
         self.vfeat = LN10_400 * np.array([v[0] if v else 0.0 for v in vrs])
         self.masks = {}
         for name, lo, hi in [("train", TRAIN_START, VAL_START), ("val", VAL_START, TEST_START),
@@ -97,13 +103,38 @@ class Scorer:
             self.masks[name] = period & (rank <= TUNE_TOP)
             self.masks[name + "_top50"] = period & (rank <= REPORT_TOP)
             self.masks[name + "_cross"] = self.masks[name] & cross
+            self.masks[name + "_change"] = self.masks[name] & recent
         self.runs = 0
         self._cache: dict[Params, np.ndarray] = {}
+
+    def _recent_changes(self) -> np.ndarray:
+        """Matches where either team is within CHANGE_MATCHES matches of a lineup change
+        (the change match counts as the first).
+
+        Team identity doesn't depend on the parameters, so one pass decides it.
+        """
+        eng, since, out = Engine(Params(), self.h.regions), {}, []
+        for m in self.h.inputs:
+            hit = False
+            for name, lineup in ((m.winner, m.winner_lineup), (m.loser, m.loser_lineup)):
+                tid, changed = eng.find(name, frozenset(p.lower() for p in lineup) if lineup else None)
+                if tid is None:
+                    continue
+                if changed > 0:
+                    since[tid] = 0
+                if since.get(tid, CHANGE_MATCHES) < CHANGE_MATCHES:
+                    hit = True
+            out.append(hit)
+            pred = eng.process(m)
+            for tid in {pred.team_a, pred.team_b}:
+                if tid in since:
+                    since[tid] += 1
+        return np.array(out)
 
     def z(self, params: Params) -> np.ndarray:
         if params not in self._cache:
             self.runs += 1
-            eng = Engine(params, self.h.regions)
+            eng = Engine(params, self.h.regions, self.h.players)
             self._cache[params] = np.array([p.z for p in eng.run(self.h.inputs)])
         return self._cache[params]
 
@@ -221,7 +252,16 @@ def main():
               f"val {int(sum(sc.masks['val'][i] for i in h.links))} of the scored ones)")
     else:
         print("HLTV: no file, so LAN weighting is not tested")
-    no_lan = set() if h.links else {"w_lan"}
+    if h.players:
+        p = h.players
+        print(f"HLTV player ratings: {len(p.ids_by_nick):,} nicknames. Fitted before {VAL_START}: ratings vs "
+              f"non-top-50 opponents run {p.delta:+.3f} high ({p.gap_n:,} player-windows); such rounds count "
+              f"{p.w:.2f} of a top-50 round and the prior is {p.mu0:.3f} ({p.promo_n} players who moved up)")
+        print(f"    validation matches within {CHANGE_MATCHES} matches of a lineup change: "
+              f"{sc.masks['val_change'].sum():,}")
+    else:
+        print("HLTV player ratings: no file, so player ratings are not tested")
+    no_lan = (set() if h.links else {"w_lan"}) | (set() if h.players else {"roster_skill"})
 
     # 1. Tune every parameter on the training period.
     full, train_loss = tune(sc, Params(), "train", frozen=no_lan)
@@ -230,43 +270,66 @@ def main():
           f"({sc.runs} runs, {time.time() - t0:.0f}s)")
     print("    " + show(full))
 
-    # 2. Ablation: switch each factor off, re-tune the rest on train, compare
-    #    match by match on all validation matches (calibration scale fitted on
-    #    train), as decision 0005 says. For region, the gain on cross-region
-    #    matches alone (most of a Major) is printed too, for information: with
-    #    under 300 such matches it is too noisy to decide on.
-    print(f"\n[2] factor tests on validation. gain = log loss without minus with "
-          f"(positive = factor helps); kept only if gain > {CLEAR:g} standard errors:")
-    keep = []
+    # 2. Backward elimination (decision 0007): switch each remaining factor
+    #    off, re-tune the rest on train, compare match by match on all
+    #    validation matches (calibration scale fitted on train). If the
+    #    weakest factor (lowest gain / standard error) doesn't clear CLEAR
+    #    standard errors, remove it and test the rest again; stop when every
+    #    remaining factor clears it. Testing all factors once and dropping
+    #    every one below the bar (decision 0005's first rule) drops both of
+    #    two factors that overlap (Step 7a). For region, the gain on
+    #    cross-region matches alone (most of a Major) is printed too, and for
+    #    the roster factors the gain just after lineup changes: for
+    #    information only, too few matches to decide on.
+    print(f"\n[2] factor tests on validation (backward elimination). gain = log loss without minus with "
+          f"(positive = factor helps); the weakest factor is removed until all clear {CLEAR:g} standard errors:")
+    current, frozen, active = full, set(no_lan), []
     for factor, names in FACTOR_PARAMS.items():
-        if factor == "lan" and not h.links:
+        if (factor == "lan" and not h.links) or (factor == "roster_skill" and not h.players):
             print(f"    {factor:<13} not tested (no HLTV file)")
-            continue
-        if full.without(factor) == full:
+        elif full.without(factor) == full:
             print(f"    {factor:<13} tuning already switched it off -> not used")
-            continue
-        off, _ = tune(sc, full.without(factor), "train", frozen=set(names) | no_lan, rounds=1)
-        gain, se = paired(sc.per_match(off, "train", "val") - sc.per_match(full, "train", "val"))
-        if gain > CLEAR * se:
-            verdict = "KEEP (clear gain)"
-            keep.append(factor)
-        elif gain < -CLEAR * se:
-            verdict = "drop (it makes predictions worse)"
+            frozen |= set(names)
         else:
-            verdict = "drop (no clear effect)"
-        print(f"    {factor:<13} gain = {gain:+.4f} +/- {se:.4f}   {verdict}")
-        if factor == "region":
-            g_x, se_x = paired(sc.per_match(off, "train", "val_cross") - sc.per_match(full, "train", "val_cross"))
-            print(f"    {'':<13} (cross-region matches only, n={sc.masks['val_cross'].sum()}: "
-                  f"{g_x:+.4f} +/- {se_x:.4f})")
+            active.append(factor)
+    rnd = 0
+    while active:
+        rnd += 1
+        print(f"  round {rnd}: {', '.join(active)}")
+        for factor in [f for f in active if current.without(f) == current]:
+            print(f"    {factor:<13} re-tuning switched it off -> removed")
+            active.remove(factor)
+            frozen |= set(FACTOR_PARAMS[factor])
+        results = {}
+        for factor in active:
+            names = FACTOR_PARAMS[factor]
+            off, _ = tune(sc, current.without(factor), "train", frozen=frozen | set(names), rounds=1)
+            gain, se = paired(sc.per_match(off, "train", "val") - sc.per_match(current, "train", "val"))
+            results[factor] = (gain, se, off)
+            print(f"    {factor:<13} gain = {gain:+.4f} +/- {se:.4f}   ({gain / se if se else 0.0:+.1f} SE)")
+            if factor == "region":
+                g_x, se_x = paired(sc.per_match(off, "train", "val_cross") - sc.per_match(current, "train", "val_cross"))
+                print(f"    {'':<13} (cross-region matches only, n={sc.masks['val_cross'].sum()}: "
+                      f"{g_x:+.4f} +/- {se_x:.4f})")
+            if factor in ("roster_skill", "roster_reset"):
+                g_c, se_c = paired(sc.per_match(off, "train", "val_change") - sc.per_match(current, "train", "val_change"))
+                print(f"    {'':<13} (matches within {CHANGE_MATCHES} matches of a lineup change, "
+                      f"n={sc.masks['val_change'].sum()}: {g_c:+.4f} +/- {se_c:.4f})")
+        if not active:
+            break
+        z_of = {f: (g / s if s else 0.0) for f, (g, s, _) in results.items()}
+        weakest = min(active, key=lambda f: z_of[f])
+        if z_of[weakest] > CLEAR:
+            print(f"    every remaining factor clears {CLEAR:g} standard errors -> stop")
+            break
+        print(f"    weakest: {weakest} -> removed")
+        current = results[weakest][2]
+        frozen |= set(FACTOR_PARAMS[weakest])
+        active.remove(weakest)
+    keep = active
 
     # 3. Selected factors only, re-tuned on train, checked on validation.
-    selected, frozen = full, set(no_lan)
-    for factor, names in FACTOR_PARAMS.items():
-        if factor not in keep:
-            selected = selected.without(factor)
-            frozen |= set(names)
-    selected, _ = tune(sc, selected, "train", frozen=frozen, rounds=1)
+    selected, _ = tune(sc, current, "train", frozen=frozen, rounds=1)
     print(f"\n[3] selected model (kept: {', '.join(keep) or 'none'}), tuned on train:")
     print("    " + show(selected))
     compare(sc, selected, "train", "val_top50", "    VALIDATION")
