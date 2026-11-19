@@ -28,3 +28,14 @@ time decay was a clear keep in Step 6.
 Same bar (2 standard errors), same data (tuned on training, judged on all
 validation matches), applied to all factors in `scripts/fit_model_v1.py`
 step [2]. The test period is still scored only once, at the end.
+
+## Amendment, 2026-11-19: every model is tuned until it stops improving
+The first backward-elimination run removed every factor, region included,
+but its comparison models had one coordinate-search pass each and were noisy
+by about ±0.001–0.002, the size of the effects tested (journal Step 7a). The
+user chose, before any re-run, from: tune fully and keep the rule (chosen);
+accept no factors; tune fully and judge region on cross-region matches
+only; drop the 2-SE bar and pick the best of all 32 combinations on
+validation. Now every tuning (full model, each comparison model, selected
+and final model) repeats its passes until a whole pass finds nothing better
+(at most 10). Whatever this keeps stands, even if it is still nothing.

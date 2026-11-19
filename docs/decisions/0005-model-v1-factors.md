@@ -22,7 +22,7 @@ and the result is written down here.
 | **Region calibration** | Learn how strong each region is from cross-region matches, so teams that mostly play at home (e.g. Lynn Vision, Chinggis Warriors, 9z) are placed correctly. | Full |
 | **Strength uncertainty** | Teams with little recent data get a wider spread of possible strengths; each simulation draws one value. Changes which ballot is safest more than the average odds. | Full |
 | **Per-team curve vs opponent strength** (user's idea) | Whether a team beats the odds more or less as the strength gap grows. See below. | Full |
-| **Player ratings, only after roster changes** | Use a new player's rating to estimate a changed lineup. Only if HLTV data is collected. | Needs HLTV |
+| **Player ratings, only after roster changes** | Use a new player's rating to estimate a changed lineup. Only if HLTV data is collected. | HLTV, collected and tested in Step 7a: not kept |
 
 ## The user's opponent-strength idea, made precise
 "How a team does against much stronger, similar and much weaker opponents"
@@ -45,10 +45,18 @@ similar and weaker opponents in the user's three buckets.
 - Head-to-head, Major experience: not selected.
 - Map pool / veto: depends on HLTV access (below).
 
-## Open: HLTV via the user's own computer
-The user is trying to connect a folder from their computer (Remote Control)
-so their logged-in browser can be used for a small, slow pass over HLTV
-(map pools; player ratings for changed lineups). HLTV's terms restrict
-automated access, so the scope stays small and the risk is on the user's
-account. Scope (current snapshot only, or also pages for past Majors so it
-can be tested) is to be decided once the connection works.
+## HLTV, through the user's own Chrome
+HLTV pages are read in the user's logged-in Chrome (the Remote Control
+route wasn't needed), one page every 8-15 seconds, and everything collected
+stays in data/raw/ (gitignored; the repo is public). HLTV's terms restrict
+automated access, so each collection round is small, asked for first, and
+the risk is on the user's account. Collected: LAN map results between top-50
+teams (journal Step 6a) and monthly player ratings 2024-02 to 2026-11
+(Step 7a).
+
+## Results under the selection rule of decision 0007 (2026-11-19)
+Backward elimination with fully tuned models kept no factor: region, time
+decay, roster reset, LAN, volatility and player ratings each fell below 2
+standard errors once the others were removed. Their values depend on each
+other (journal Step 7a), and validation can't prove any one of them.
+Model v1 is now our own rating + the VRS blend.

@@ -582,11 +582,77 @@ is the user's call; asked before running any alternative, so the choice
 can't follow from which factors it keeps.
 
 **User's choice: backward elimination** (decision 0007). Implemented in
-`scripts/fit_model_v1.py` step [2]. **Not yet run** (usage limit reached):
-next, run the fit, record which factors survive, then re-run the format
-check and Stage 1 if the model changed. Note: the last fit run (one-at-a-
-time rule) overwrote `data/processed/model_v1.json` with the region-only
-model, so re-run the fit before `run_stage.py`.
+`scripts/fit_model_v1.py` step [2].
+
+**Result (2026-11-19): no factor survives.** Gains in standard errors, each
+round re-tuned without the factor removed in the round before:
+
+| Round | time decay | roster reset | region | volatility | player ratings | removed |
+|---|---|---|---|---|---|---|
+| 1 | −2.1 | −1.7 | +2.2 | −0.7 | +0.6 | time decay |
+| 2 | | −1.0 | **+3.5** | +1.0 | **+2.5** | roster reset |
+| 3 | | | +1.9 | +0.1 | +1.1 | volatility |
+| 4 | | | +1.6 | | +0.6 | player ratings |
+| 5 | | | +1.7 | | | region |
+
+Region on cross-region matches alone: +0.006 ± 0.004 in every round. The
+no-factor model scores 0.6547 on the top-50 validation matches, the same as
+Step 6's model (time decay + region, 0.6547); region alone scored 0.6526.
+
+**Why this result is not trustworthy as it stands: tuning noise.** The
+same test (time decay removed from the full model) gave −0.0008 in the
+first run and −0.0020 here, only because the unused LAN weight was held
+fixed instead of free, so the coordinate search ended elsewhere. Each
+comparison model gets one quick tuning pass, so the models being compared
+are noisy by about ±0.001–0.002, the size of the effects tested. Round 2→3
+shows it: removing roster reset (a factor that hurt) cut region from +3.5
+to +1.9 SE and player ratings from +2.5 to +1.1.
+
+**Stage 1 with the no-factor model** (advance %, Step 6c in brackets):
+FlyQuest 44.6 (31.6), Lynn Vision 41.5 (32.5), Chinggis 21.3 (12.6), GOSH
+20.0 (27.7), PVISION 67.6 (74.6), HEROIC 64.9 (72.9). Best ballot: P(≥5) =
+24.9% (31.5%); Liquid → M80 in the advance picks. Most of the change is
+losing region calibration (teams from weaker regions keep inflated
+ratings).
+
+**User's choice: tune fully, same rule** (decision 0007, amendment). Every
+tuning now repeats its coordinate passes until a whole pass finds nothing
+better (at most 10).
+
+**Re-run with full tuning: still no factor, and my diagnosis above was
+wrong.** From round 3 on the numbers are identical to the first run, so
+one-pass tuning was not what made the gains swing:
+
+| Round | time decay | roster reset | LAN | region | volatility | player ratings | removed |
+|---|---|---|---|---|---|---|---|
+| 1 | −0.7 | +1.7 | −2.7 | +3.4 | −1.1 | +1.0 | LAN |
+| 2 | −0.7 | +3.3 | | +2.6 | +0.3 | +1.0 | time decay |
+| 3 | | −1.0 | | +3.5 | +1.4 | +2.5 | roster reset |
+| 4 | | | | +1.9 | +0.1 | +1.1 | volatility |
+| 5 | | | | +1.6 | | +0.6 | player ratings |
+| 6 | | | | +1.7 | | | region |
+
+The swings come from the factors changing each other's value: removing LAN
+moved roster reset from +1.7 to +3.3 SE, removing time decay then flipped it
+to −1.0, removing roster reset then cut region from +3.5 to +1.9. Time
+decay, roster reset and player ratings all change how fast a rating moves
+after a team changes, so what one adds depends on which others are there.
+With effects of 0.002–0.005 and standard errors of 0.001–0.002, 1,694
+validation matches can't prove any single one of them. The no-factor model
+is not shown to be better either; nothing is shown to help clearly.
+
+**Model v1 is now our own rating + the VRS blend** (k = 32, 16× faster
+learning for new teams, blend own 0.581 / VRS 0.093, fitted on training +
+validation; BO3 scale 1.11, BO1 from BO3 by independent maps, refitted by
+the user's run of `check_bo_format.py`). Stage 1 is as in the table above
+(the user's run used the same model). The test period is still unscored.
+
+**Open risk for the picks:** without region calibration, teams that mostly
+play in weaker regions (FlyQuest, Lynn Vision, Chinggis Warriors) keep
+ratings inflated by home results; on cross-region matches region helped by
++0.006 ± 0.004 to ± 0.006 in every round, below the bar but always
+positive. Step 7's strength uncertainty will widen exactly these teams'
+outcomes; whether to revisit region is the user's call.
 
 ---
 

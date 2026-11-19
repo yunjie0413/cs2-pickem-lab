@@ -67,6 +67,7 @@ FACTOR_PARAMS = {  # parameters frozen when a factor is switched off
 }
 CHANGE_MATCHES = 5  # "just after a lineup change": either team is within 5 matches of one
                     # (a 60-day window covered 87% of validation matches: lineups change often)
+MAX_PASSES = 10  # coordinate-search passes at most (it stops earlier once a pass finds nothing better)
 CLEAR = 2.0  # a factor is kept only if it helps by more than 2 standard errors
 MIN_GAIN = 2e-5  # a search step must improve log loss by this much (else flat
                  # directions drift: new_rating once slid to its bound for a 0.00001 gain)
@@ -176,8 +177,11 @@ def _beyond(name: str, values: list, cur) -> float | None:
     return None if nxt in values else nxt
 
 
-def tune(sc: Scorer, start: Params, period: str, frozen: set[str], rounds: int = 2) -> tuple[Params, float]:
-    """Coordinate search: one parameter at a time over its range, repeated."""
+def tune(sc: Scorer, start: Params, period: str, frozen: set[str], rounds: int = MAX_PASSES) -> tuple[Params, float]:
+    """Coordinate search: one parameter at a time over its range, repeated until a whole pass
+    finds nothing better (at most `rounds` passes). One pass was not enough: the models being
+    compared ended wherever the search happened to stop, noisy by about the size of the factor
+    effects (journal Step 7a, decision 0007)."""
     best, best_loss = start, sc.loss(start, period)
     grid = {k: list(v) for k, v in GRID.items()}
     for _ in range(rounds):
@@ -303,7 +307,7 @@ def main():
         results = {}
         for factor in active:
             names = FACTOR_PARAMS[factor]
-            off, _ = tune(sc, current.without(factor), "train", frozen=frozen | set(names), rounds=1)
+            off, _ = tune(sc, current.without(factor), "train", frozen=frozen | set(names))
             gain, se = paired(sc.per_match(off, "train", "val") - sc.per_match(current, "train", "val"))
             results[factor] = (gain, se, off)
             print(f"    {factor:<13} gain = {gain:+.4f} +/- {se:.4f}   ({gain / se if se else 0.0:+.1f} SE)")
@@ -329,13 +333,13 @@ def main():
     keep = active
 
     # 3. Selected factors only, re-tuned on train, checked on validation.
-    selected, _ = tune(sc, current, "train", frozen=frozen, rounds=1)
+    selected, _ = tune(sc, current, "train", frozen=frozen)
     print(f"\n[3] selected model (kept: {', '.join(keep) or 'none'}), tuned on train:")
     print("    " + show(selected))
     compare(sc, selected, "train", "val_top50", "    VALIDATION")
 
     # 4. Final model: re-tuned on train + validation; blend fitted there; saved.
-    final, tv_loss = tune(sc, selected, "trainval", frozen=frozen, rounds=1)
+    final, tv_loss = tune(sc, selected, "trainval", frozen=frozen)
     z = sc.z(final)
     w_blend = fit_logistic(np.column_stack([z, sc.vfeat])[sc.masks["trainval"]])
     print(f"\n[4] final model, tuned on train+val ({tv_loss:.4f}):")

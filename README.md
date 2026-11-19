@@ -4,12 +4,13 @@ Predicts CS2 Major Swiss stages and chooses the Pick'Em ballot with the best
 chance of 5+ correct picks.
 
 **Status:** the Swiss simulator, ballot optimizer and Model v1 are done and
-tested. Model v1 (our own rating with region calibration and faster
-learning after breaks, blended with Valve's VRS points; BO1/BO3 calibrated
-on real matches of each format) predicts past matches better than Valve's
-points alone (log loss 0.6537 vs 0.6648 on matches it never saw). Not yet
-done: strength uncertainty in the simulator and a backtest of whole ballots
-on past Majors (Step 7). The Singapore Stage 1 bracket was confirmed on
+tested. Model v1 is our own Elo-style rating blended with Valve's VRS
+points, BO1/BO3 calibrated on real matches of each format (log loss 0.6547
+vs 0.6605 for Valve's points alone on validation matches). Six extra
+factors (region, time decay, roster reset, LAN, volatility, HLTV player
+ratings) were tested by backward elimination and none cleared the bar
+(journal Step 7a, decision 0007). Not yet done: strength uncertainty in the
+simulator and a backtest of whole ballots on past Majors (Step 7). The Singapore Stage 1 bracket was confirmed on
 2026-11-18.
 
 ## How it works
