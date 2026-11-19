@@ -215,19 +215,263 @@ user's account). Plan in Step 6a.
 
 ---
 
+## 2026-11-18, Step 6: Model v1, tested factor by factor
+
+**Built:**
+- `pickem/model_v1.py`: our own Elo-style rating. It goes through all 26,631
+  matches in date order and predicts each one *before* learning from it, so
+  every prediction uses only earlier results. Teams are followed by lineup
+  (3+ of the five players in a team's latest lineup = the same team;
+  otherwise the team that currently uses the name), so renames don't break a
+  team's history. Each factor from decision 0005 can be switched off.
+- `pickem/history.py`: everything the engine reads (Valve's matches, plus
+  LAN status from HLTV, Step 6a).
+- `scripts/fit_model_v1.py`: the training period (2024-08-06 to 2025-05-31)
+  tunes the parameters; the validation period (2025-06-01 to 2025-10-31)
+  decides which factors stay; the test period (2025-11-01 on) is scored at
+  the end with `--final`.
+- On top of the rating, a small logistic model blends our rating gap with
+  Valve's points gap (two weights, fitted on train + validation), as 0005
+  planned.
+
+**How a factor is tested** (decision 0006): switch it off, re-tune the rest on
+the training period, then compare the two versions match by match on the
+validation period. Keep it only if it helps by more than 2 standard errors.
+
+**Results** (validation: 1,694 matches between VRS top-100 teams; gain = log
+loss without the factor minus with it, so positive = the factor helps):
+
+| Factor (decision 0005) | Gain | Verdict |
+|---|---|---|
+| Region calibration | +0.0054 ± 0.0014 (cross-region matches only: +0.0091 ± 0.0051) | **kept** |
+| Time decay | +0.0039 ± 0.0013 | **kept**, as "learn faster after a break" (below) |
+| Roster-change reset | +0.0023 ± 0.0015 | dropped for now: leans positive, not clear (1.5 standard errors) |
+| LAN weighting (LAN list from HLTV) | tuning kept the weight at 1.0 | dropped: no effect |
+| Per-team curve vs opponent strength (one slope per team) | −0.0022 ± 0.0015 | dropped: no effect |
+| Event-strength weighting | no leak-free data | on hold (decision 0006) |
+| BO1 vs BO3 | Step 6b | used in the simulator |
+| Strength uncertainty | belongs to the simulator | Step 7 |
+| Player ratings after roster changes | not started | later |
+
+Time decay won in its "uncertainty" form, not the classic one. After a break
+the team's match count fades (time scale 240 days), so its next results move
+its rating more. Pulling the rating itself toward the average was not chosen
+by the tuning: after a break we don't know whether a team got better or
+worse, only that we know less. (This is the idea behind Glicko's rating
+deviation.)
+
+The setting that matters most is not on the list: a team with few matches
+gets a much bigger update size (32× at first, fading over about 10
+matches). Valve's data starts in February 2024, so early on every team is
+"new", and the boost lets ratings settle quickly.
+
+Roster resets lean positive but aren't clear yet. Part of their job is
+already done by following teams by lineup: a team that replaces 3+ players
+starts fresh unless it keeps its name.
+
+**Test period** (from 2025-11-01, both teams VRS top 50, 1,440 matches):
+
+| Model | Log loss | Brier | Accuracy |
+|---|---|---|---|
+| Coin flip | 0.6931 | 0.2500 | 50.0% |
+| Baseline 0: VRS points, fitted scale | 0.6648 | 0.2362 | 59.5% |
+| Model v1: own rating only | 0.6538 | 0.2313 | 60.8% |
+| Model v1: own rating + VRS blend | **0.6537** | **0.2312** | 60.3% |
+
+- Better than Valve's points by **+0.0111 ± 0.0036** per match, about 3
+  standard errors: a clear improvement, though not a big one in absolute
+  terms (top-50 CS stays close to random; the favourite still wins only
+  about 60%). Validation points the same way (+0.0058 ± 0.0061).
+- The blend leans almost entirely on our rating (weights 0.56 vs 0.06 in the
+  same units): once region and breaks are handled, Valve's points add little.
+- Calibration stays good: predicted and observed win rates agree within
+  noise in every bin with enough matches.
+- Final parameters (tuned on train + validation): update size 24, new-team
+  boost 32×, match count fading over 240 days, region learning rate 8.
+
+**Problems found and fixed on the way.** Each changed the results. All were
+found from validation results or by inspection, not from test scores.
+1. *Leak in Valve's LAN flag* (decision 0006). The first fit "kept" LAN
+   weighting with the biggest gain of any factor and with backwards weights
+   (LAN wins counted least). The flag depends on results after the match.
+2. *Region judged on the wrong set.* For one run I judged region on
+   cross-region matches only (too few to decide anything); reverted to
+   0005's rule of all validation matches.
+3. *Renamed teams lost their history.* The engine kept each team under its
+   first name. Found because the Stage 1 output showed HEROIC "as Sangal". A
+   renamed team that later replaced 3+ players was split in two, and its
+   region was looked up under the old name.
+4. *Decay pulled toward the wrong average.* Time decay and roster resets
+   pulled toward a fixed 1500 while new teams started elsewhere (500 in one
+   fit), so ratings "decayed" upward and both factors had been judged on a
+   broken version. The engine now tracks the real average of all teams; new
+   teams start there and resets pull there.
+5. *The parameter search stopped at range edges or drifted.* Ranges now
+   extend while the best value is on an edge, and each step must improve log
+   loss by at least 0.00002.
+6. *Two rosters shared one rating.* A lineup was matched to the team that 3+
+   of its players had *last played for*, even if that team had replaced
+   them since. Former players of one team (Permitta) ended up on two teams,
+   Walczaki and the current Eternal Fire, and both claimed it, so their
+   results were mixed into one rating. Found because Eternal Fire's rating
+   didn't fit its record (48–22 since May). Now a lineup continues a team
+   only if 3+ of its players are in that team's *latest* lineup, and a name
+   only continues the team that still uses it. This fix made the time-decay
+   factor useful (before, a break was hidden by the other roster's matches)
+   and improved the whole model on validation (0.6636 → 0.6619 with all
+   factors on).
+
+**Honesty note on the test period:** it was also scored for the two leaky
+versions (void), for a version between fixes 2 and 3 (+0.0086 ± 0.0040) and
+for one between fixes 4 and 6 (+0.0066 ± 0.0041); one more run after fix 3
+was discarded unread. The table above is from the final model. Every change
+came from validation results or from bugs found by inspecting output; none
+was made because of a test score. Still, the test period has now been
+looked at several times, so treat it as slightly less clean than a first
+look.
+
+---
+
+## 2026-11-18, Step 6a: HLTV map results, collected in the user's browser
+
+**What:** HLTV's map results list with the filters "LAN" and "ranking: top
+50", 2024-12-01 to 2026-11-17: 5,666 maps from 114 pages.
+
+**How:** a small script in the user's logged-in Chrome tab read one page every
+8–15 seconds (about 22 minutes in all). It would have stopped at the first
+empty page; none came. The rows were saved as a CSV and moved to
+`data/raw/hltv/maps_lan_top50.csv`. That folder is gitignored, so HLTV's data
+stays on the user's PC. The browser's temporary copy was deleted afterwards.
+
+**Processing** (`pickem/data/hltv.py`):
+- Maps into series: same event, same two teams, maps at most a day apart.
+  Result: 2,450 series, 304 BO1, 2,090 BO3 and 56 BO5 (one 1–1 pair dropped:
+  no winner).
+- Series linked to Valve's match list: same winner and loser, date within a
+  day. Short names such as "NIP" are learned automatically from meetings
+  where the other team's name matches. 2,392 of 2,450 series are linked
+  (97.6%).
+
+**Leak check:** the ranking filter uses each team's ranking at the time of
+the match, not today's: 117 different teams appear, some only in early
+months (e.g. Cloud9 in December 2024). So it can't leak the future the way
+Valve's flags did (decision 0006).
+
+**Used for:** LAN status (Step 6) and match format (Step 6b). Map pools and
+player ratings are not collected yet.
+
+---
+
+## 2026-11-18, Step 6b: BO1 vs BO3
+
+**Question:** Valve's data doesn't record match format, and Step 5 worried
+that BO1 randomness was being counted twice. HLTV's map counts give the
+format of every linked match (1 map = BO1, 2–3 maps = BO3).
+
+**Data:** linked LAN matches after a 6-month warm-up, with VRS points for both
+teams: 300 BO1, 2,023 BO3 (`scripts/check_bo_format.py`).
+
+**Result** (calibration scale: the model's probability is sigmoid(scale ×
+blend); 1.0 = the fit on all matches, all formats, mostly online):
+- BO1 0.66 ± 0.18, BO3 1.15 ± 0.08: BO1s are clearly more random. BO3s
+  between top teams on LAN are a bit *more* predictable than the average
+  match.
+- The independent-maps rule fits: a team that wins a BO3 with probability q
+  wins a map with p where p²(3 − 2p) = q, and a BO1 with p. On the 300 real
+  BO1s this does as well as their own fitted scale (log loss 0.6684 vs
+  0.6681). Example: a 60% BO3 favourite wins about 56–57% of BO1s.
+
+**Decision:** BO3 = sigmoid(1.15 × blend); BO1 is derived from the BO3
+probability by independent maps (more precise than a scale fitted on only
+300 BO1s). This replaces the Step 5 workaround: each format is now
+calibrated against real matches of that format.
+
+---
+
+## 2026-11-18, Step 6c: Singapore Stage 1 with Model v1
+
+**Team check:** all 16 teams are found by lineup under their current names,
+and every team's chain of credited matches was listed (names used, players
+shared with today's roster). Six have played with mostly today's players
+since 2024: 9z, M80, DENDELE (the former Sharks), Imperial, FlyQuest and
+Lynn Vision. 100 Thieves is new (February 2026, all 93 matches with today's
+core). The rest formed their current core more recently:
+
+| Team | Today's core (3+ of the 5) together since | Matches with today's core |
+|---|---|---|
+| BC.Game | 2026-07-31 | 30 |
+| Eternal Fire | 2026-04-23 | 75 |
+| Ninjas in Pyjamas | 2026-04-23 | 63 |
+| Wildcard | 2026-03-23 | 58 |
+| Liquid | 2026-03-19 | 55 |
+| PARIVISION | 2026-01-16 | 69 |
+| HEROIC | 2026-01-14 | 87 |
+| Chinggis Warriors | 2025-10-23 | 78 |
+| FaZe | 2025-10-04 | 91 |
+
+Because roster resets didn't pass the test, a rating carries over a roster
+change and then adapts. With update size 24, results from 30 matches ago
+still carry roughly a third of their weight, from 60 matches ago about an
+eighth. So only BC.Game leans noticeably on an earlier roster (its chain
+includes the BLEED lineup and an earlier BC.Game lineup, 158 matches with
+none of today's players). That matters because BC.Game is a 0-3 pick (see
+below).
+
+**Chance to advance** (100,000 simulated stages):
+
+| Seed | Team | Advance | | Seed | Team | Advance |
+|---|---|---|---|---|---|---|
+| 1 | Ninjas in Pyjamas | 71% | | 9 | M80 | 49% |
+| 2 | PARIVISION | 75% | | 10 | DENDELE | 39% |
+| 3 | HEROIC | 73% | | 11 | Imperial | 35% |
+| 4 | FaZe | 70% | | 12 | Wildcard | 40% |
+| 5 | Liquid | 61% | | 13 | BC.Game | 28% |
+| 6 | Eternal Fire | 62% | | 14 | FlyQuest | 32% |
+| 7 | 100 Thieves | 66% | | 15 | Chinggis Warriors | 13% |
+| 8 | 9z | 57% | | 16 | Lynn Vision | 33% |
+
+**Best ballot for P(≥5)** (graded on fresh simulations):
+- 3-0: PARIVISION, 100 Thieves
+- Advance: Ninjas in Pyjamas, HEROIC, FaZe, Liquid, Eternal Fire, 9z
+- 0-3: BC.Game, Chinggis Warriors
+- P(≥5 correct) = 31.5%, expected correct 3.85. The ballot that maximises
+  expected correct picks puts HEROIC in 3-0 instead of 100 Thieves and gets
+  31.1%.
+- Close calls: the second 0-3 pick is nearly a tie (0-3 chance: BC.Game
+  21.6%, Lynn Vision 20.2%, FlyQuest 19.6%), and BC.Game's rating is the
+  least settled (above). The sixth advance pick is clearer (9z 56.5%, next
+  M80 48.9%).
+
+**Why higher than Baseline 0 (17.5%):** Model v1 separates the teams more (it
+predicts better, and its calibration says the gaps are real), and BO1s are no
+longer flattened twice.
+
+**Caveats:** the team list and seeding are still provisional. The simulator
+treats every win probability as exact (strength uncertainty is Step 7), so
+31.5% is probably a little optimistic.
+
+---
+
 ## Open questions for the user (answer whenever you review)
 
 1. Confirm the Stage 1 team list and round 1 pairings from the official
-   bracket or in-game Pick'Em once they're published.
-2. ~~Factor discussion~~ Done: decision 0005.
+   bracket or in-game Pick'Em once they're published (Stage 1 is reported
+   to start 2026-11-24).
+2. ~~Factor discussion~~ Done: decision 0005, amended by 0006.
 3. ~~Network policy / Liquipedia~~ No longer relevant: the project now runs
    on the user's PC, where Liquipedia is reachable.
 
 ## Next steps (proposed)
 
-- **Step 6:** Model v1 with the factors in decision 0005, each tested
-  against the 0.6648 benchmark on the same held-out matches; BO1/BO3 check
-  on past Major Swiss matches.
-- **Step 7:** strength-uncertainty sampler; backtest ballots on past Majors.
-- **Later:** map/veto model (needs map-level data), Stages 2–3 and playoffs,
-  a web page.
+- **Before picks lock:** confirm teams, seeds and round 1 pairings; update
+  the event file; re-run.
+- **Step 7:** strength uncertainty in the simulator (each simulated stage
+  draws team strengths from how well we know each team: fewer matches with
+  today's core, or a long break, means a wider spread), and a backtest of
+  whole ballots on past Majors' Stage 1 (Austin 2025, Budapest 2025, Cologne
+  2026): would our ballots have reached 5, and is our P(≥5) calibrated?
+- **Model v2 ideas from Step 6:** a proper Glicko-style uncertainty (the
+  new-team boost and forgetting after breaks were the strongest settings);
+  re-test roster resets as more data arrives (they leaned positive); event
+  strength from HLTV event names; map pools and player ratings from HLTV.
+- **Later:** Stages 2–3 and playoffs, a web page.

@@ -3,6 +3,7 @@
   "stage": "Stage 1",
   "status": "PROVISIONAL - verify team list and seeds against the official bracket before locking picks",
   "dates_reported": "2026-11-24 to 2026-11-27 (news reports; not confirmed from an official source)",
+  "start_date": "2026-11-24",
   "rules": "Valve Major Supplemental Rulebook, ValveSoftware/counter-strike_rules_and_regs @ 621b7d9",
   "seeding_method": "Stage 1 seeds follow VRS global standing (rulebook: Pre-event Seeding). Seeds below are the 16 reported Stage 1 teams sorted by the 2026-11-02 VRS global standings (ValveSoftware/counter-strike_regional_standings @ f8c55f2).",
   "verification_notes": [
