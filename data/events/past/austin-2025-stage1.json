@@ -1,0 +1,252 @@
+{
+  "event": "BLAST.tv Austin Major 2025",
+  "stage": "Stage 1",
+  "start_date": "2025-06-03",
+  "status": "PAST STAGE (backtest): seeds and records from Liquipedia, read 2026-11-19",
+  "seeding_method": "Valve Global Standings (Liquipedia)",
+  "teams": [
+    {
+      "seed": 1,
+      "name": "Complexity",
+      "org_name": "Complexity",
+      "roster": [
+        "Cxzi",
+        "Grim",
+        "JT",
+        "junior",
+        "nicx"
+      ],
+      "vrs_points": 1433.1,
+      "vrs_global_rank": 17
+    },
+    {
+      "seed": 2,
+      "name": "HEROIC",
+      "org_name": "HEROIC",
+      "roster": [
+        "LNZ",
+        "SunPayus",
+        "tN1R",
+        "xfl0ud",
+        "yxngstxr"
+      ],
+      "vrs_points": 1551.6,
+      "vrs_global_rank": 13
+    },
+    {
+      "seed": 3,
+      "name": "B8",
+      "org_name": "B8",
+      "roster": [
+        "alex666",
+        "esenthial",
+        "headtr1ck",
+        "kensizor",
+        "npl"
+      ],
+      "vrs_points": 1274.8,
+      "vrs_global_rank": 20
+    },
+    {
+      "seed": 4,
+      "name": "BetBoom Team",
+      "org_name": "BetBoom",
+      "roster": [
+        "Ax1Le",
+        "Boombl4",
+        "Magnojez",
+        "S1ren",
+        "zorte"
+      ],
+      "vrs_points": 1101.9,
+      "vrs_global_rank": 36
+    },
+    {
+      "seed": 5,
+      "name": "TYLOO",
+      "org_name": "TYLOO",
+      "roster": [
+        "Attacker",
+        "JamYoung",
+        "Jee",
+        "Mercury",
+        "Moseyuh"
+      ],
+      "vrs_points": 1358.5,
+      "vrs_global_rank": 18
+    },
+    {
+      "seed": 6,
+      "name": "Lynn Vision Gaming",
+      "org_name": "Lynn Vision",
+      "roster": [
+        "C4LLM3SU3",
+        "EmiliaQAQ",
+        "Starry",
+        "Westmelon",
+        "z4kr"
+      ],
+      "vrs_points": 1212.4,
+      "vrs_global_rank": 25
+    },
+    {
+      "seed": 7,
+      "name": "Wildcard",
+      "org_name": "Wildcard",
+      "roster": [
+        "JBa",
+        "phzy",
+        "Sonic",
+        "stanislaw",
+        "susp"
+      ],
+      "vrs_points": 1036.6,
+      "vrs_global_rank": 48
+    },
+    {
+      "seed": 8,
+      "name": "FlyQuest",
+      "org_name": "FlyQuest",
+      "roster": [
+        "INS",
+        "Liazz",
+        "nettik",
+        "regali",
+        "Vexite"
+      ],
+      "vrs_points": 1212.7,
+      "vrs_global_rank": 24
+    },
+    {
+      "seed": 9,
+      "name": "OG",
+      "org_name": "OG",
+      "roster": [
+        "Buzz",
+        "Chr1zN",
+        "F1KU",
+        "nicoodoz",
+        "spooke"
+      ],
+      "vrs_points": 1097.1,
+      "vrs_global_rank": 38
+    },
+    {
+      "seed": 10,
+      "name": "Chinggis Warriors",
+      "org_name": "Chinggis Warriors",
+      "roster": [
+        "ariucle",
+        "controlez",
+        "cool4st",
+        "Efire",
+        "ROUX"
+      ],
+      "vrs_points": 1087.0,
+      "vrs_global_rank": 40
+    },
+    {
+      "seed": 11,
+      "name": "Imperial Esports",
+      "org_name": "Imperial",
+      "roster": [
+        "chayJESUS",
+        "decenty",
+        "noway",
+        "try",
+        "VINI"
+      ],
+      "vrs_points": 1074.2,
+      "vrs_global_rank": 41
+    },
+    {
+      "seed": 12,
+      "name": "Nemiga Gaming",
+      "org_name": "Nemiga",
+      "roster": [
+        "1eeR",
+        "khaN",
+        "riskyb0b",
+        "Xant3r",
+        "zweih"
+      ],
+      "vrs_points": 1044.7,
+      "vrs_global_rank": 45
+    },
+    {
+      "seed": 13,
+      "name": "NRG",
+      "org_name": "NRG",
+      "roster": [
+        "br0",
+        "HexT",
+        "Jeorge",
+        "nitr0",
+        "oSee"
+      ],
+      "vrs_points": 1120.7,
+      "vrs_global_rank": 32
+    },
+    {
+      "seed": 14,
+      "name": "Legacy",
+      "org_name": "Legacy",
+      "roster": [
+        "dumau",
+        "latto",
+        "lux",
+        "n1ssim",
+        "saadzin"
+      ],
+      "vrs_points": 1034.9,
+      "vrs_global_rank": 49
+    },
+    {
+      "seed": 15,
+      "name": "Metizport",
+      "org_name": "Metizport",
+      "roster": [
+        "adamb",
+        "hampus",
+        "isak",
+        "L00m1",
+        "Plopski"
+      ],
+      "vrs_points": 958.7,
+      "vrs_global_rank": 60
+    },
+    {
+      "seed": 16,
+      "name": "Fluxo",
+      "org_name": "Fluxo",
+      "roster": [
+        "arT",
+        "kye",
+        "mlhzin",
+        "piriajr",
+        "zevy"
+      ],
+      "vrs_points": 999.4,
+      "vrs_global_rank": 55
+    }
+  ],
+  "completed_matches": [],
+  "actual_records": {
+    "B8": "3-0",
+    "HEROIC": "3-0",
+    "BetBoom Team": "3-1",
+    "OG": "3-1",
+    "Nemiga Gaming": "3-1",
+    "Lynn Vision Gaming": "3-2",
+    "Legacy": "3-2",
+    "TYLOO": "3-2",
+    "FlyQuest": "2-3",
+    "NRG": "2-3",
+    "Wildcard": "2-3",
+    "Imperial Esports": "1-3",
+    "Chinggis Warriors": "1-3",
+    "Complexity": "1-3",
+    "Metizport": "0-3",
+    "Fluxo": "0-3"
+  }
+}

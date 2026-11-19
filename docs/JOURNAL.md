@@ -749,6 +749,108 @@ validation 1,208).
 - Online map results are not collected (the user's condition: only if the
   map model shows a difference). Stage 1 is unchanged.
 
+## 2026-11-19, Step 7c: backtest on past Majors' Stage 1
+
+**User's choice:** "Backtest on past Majors first", over finalizing now or
+revisiting region. Question: would our ballots have reached 5 correct, and
+is our predicted P(≥5) believable?
+
+**Stages:** Perfect World Shanghai 2024 Opening Stage, BLAST.tv Austin 2025
+Stage 1, StarLadder Budapest 2025 Stage 1, IEM Cologne 2026 Stage 1.
+
+**Data** (`scripts/build_past_events.py` → `data/events/past/*.json`):
+- Seeds and final records were read from Liquipedia in the user's Chrome:
+  ordinary page views, about ten in all. Liquipedia refused scripted fetches
+  (403), so we didn't use them.
+- The seed order is the order of the stage's invite list on each event
+  page. For every stage it matches all 8 round-1 pairings (seed i vs i+8).
+  That check confirms the pairs, not the order within each pair. The order
+  only affects later-round pairings.
+- Shanghai was seeded by regional standings within each region's slots;
+  the other three by global standings.
+- Each team's lineup comes from its first stage match in Valve's data.
+  VRS points come from the last snapshot before the stage. All 64 teams
+  were found.
+
+**Method** (`scripts/backtest_majors.py`):
+- Model v1 replays only the matches before the stage started
+  (`load_model(..., before=start)`). It uses the same settings, blend and
+  BO3 scale as for Singapore, with σ = 0.
+- Baseline 0 is VRS points at Elo scale 1100.
+- For each model, 50,000 simulations choose the ballots (A = most expected
+  correct picks, B = highest P(≥5), as in `run_stage.py`). A fresh 50,000
+  give the predicted numbers. The ballots are then graded against the real
+  records.
+- Record log score: the average −ln P(the record each team actually
+  finished with). Lower is better. Knowing nothing (all six records equally
+  likely) scores ln 6 = 1.792.
+
+**Leakage, stated before the run:**
+- The ratings use only earlier matches. The model's settings, however,
+  were tuned on 2024-08 to 2025-10, and the BO3 scale on all linked
+  matches. So the settings saw Shanghai's year (training) and Austin
+  (validation).
+- Budapest and Cologne are in the **test period**. This backtest looks at
+  their results before the single `--final` scoring, so **no model change
+  may be based on them**. Their roughly 66 stage matches are a small part
+  of the test period, so the final score loses little of its blindness.
+
+**Results:**
+
+| Stage | P(≥5) v1 ballot B | v1 correct, A / B | P(≥5) baseline | baseline correct, A / B | record log score v1 / baseline |
+|---|---|---|---|---|---|
+| Shanghai 2024 | 29.9% | 3 / **5** | 28.6% | 3 / 3 | 1.570 / 1.620 |
+| Austin 2025 | 29.9% | 4 / 4 | 22.2% | **6 / 6** | 1.678 / 1.667 |
+| Budapest 2025 | 29.3% | 3 / 3 | 27.5% | **6 / 6** | 1.747 / 1.744 |
+| Cologne 2026 | 24.3% | **5 / 5** | 22.8% | 2 / 1 | 1.626 / 1.652 |
+| **Total** | 1.14 passes expected | 1 / 2 passes; 15 / 17 correct (14.8 expected) | 1.01 expected | 2 / 2 passes; 17 / 16 correct (14.3 expected) | 1.655 / 1.671 |
+
+Model v1's B ballots, for reference:
+- Shanghai, 5 correct: 3-0 Liquid, MongolZ | advance FURIA, VP, Complexity,
+  BIG, paiN, FlyQuest | 0-3 Passion UA, Rare Atom.
+- Austin, 4 correct: 3-0 Complexity, HEROIC | advance B8, TYLOO, FlyQuest,
+  Imperial, Legacy, Fluxo | 0-3 Chinggis, Metizport.
+- Budapest, 3 correct: 3-0 Legacy, PARIVISION | advance FaZe, B8,
+  GamerLegion, Fnatic, Lynn Vision, NRG | 0-3 RED Canids, The Huns.
+- Cologne, 5 correct: 3-0 GamerLegion, BetBoom | advance B8, HEROIC, BIG,
+  M80, MIBR, Lynn Vision | 0-3 Gaimin, FlyQuest.
+
+**Findings:**
+1. **Calibration looks fine, as far as 4 stages can show.** We expected
+   about 1.1 passes and saw 2 with each model. Expected correct picks were
+   14.8 and the actual totals were 15 to 17. With about 28% per stage, 2 or
+   more passes in 4 stages happens about 1 time in 3.
+2. **The backtest can't separate Model v1 from Valve's points.** On record
+   log score Model v1 is better by 0.016 ± 0.014 per team. The stage is
+   the unit, since teams in one stage share outcomes. That is about 1 SE.
+   Each model passed twice. The validation-match result (log loss 0.6547 vs
+   0.6605 over 1,694 matches) remains our evidence for Model v1. 4 stages
+   can neither confirm nor overturn it.
+3. **Stage 1 is close to a lottery.** Both models beat knowing nothing by
+   only about 0.13 nats per team. Singapore's 24.9% P(≥5) is within the
+   22–30% range of these four stages.
+4. **Where the models disagree** (the 5 teams per stage with the biggest
+   gap in advance chance), Model v1's direction was right 10 times out of
+   20. A pattern noticed only after looking:
+   - When Model v1 rated an Americas or Asia team above its VRS standing,
+     it was right 2 times out of 9. It was wrong on FlyQuest, Fluxo,
+     Imperial, NRG, THUNDERdOWNUNDER and twice on Lynn Vision, and right on
+     paiN and Legacy.
+   - When it rated a European team above VRS, it was right 3 times out of 3.
+
+   This fits the open region risk from Step 7a. But it is post hoc and
+   only 9 cases (p ≈ 0.09 if each were a coin flip), and 4 of the 9 are
+   test-period stages. So it is a hint, not evidence, and by the rule
+   above it is not grounds for a change.
+5. **A region re-test on cross-region matches would add nothing.** Region
+   offsets only change predictions for matches between regions: 359 of
+   the 3,734 validation matches. Both the paired test's total and its
+   variance come almost entirely from those matches. A subset test would
+   therefore repeat the backward-elimination verdict (region dropped).
+
+**For Singapore:** nothing changes. The only pick that depends on region
+is M80 vs Liquid for the last advance slot (Step 7a).
+
 ---
 
 ## Open questions for the user (answer whenever you review)
@@ -763,11 +865,11 @@ validation 1,208).
 - **Agreed order (user, 2026-11-18):** player ratings from HLTV (roster
   changes, 9z's stand-in) → Step 7 → map model from the LAN maps we already
   have; online map results only if the map model shows a real gain.
-- **Step 7:** strength uncertainty in the simulator (each simulated stage
-  draws team strengths from how well we know each team: fewer matches with
-  today's core, or a long break, means a wider spread), and a backtest of
-  whole ballots on past Majors' Stage 1 (Austin 2025, Budapest 2025, Cologne
-  2026): would our ballots have reached 5, and is our P(≥5) calibrated?
+- ~~**Step 7:** strength uncertainty and a backtest on past Majors~~ Done:
+  Steps 7b and 7c.
+- **Finalize:** score the test period once (`--final`), write the final
+  Singapore picks with their caveats, and re-run if a roster changes before
+  the lock (2026-11-24 12:00 SGT).
 - **Model v2 ideas from Step 6:** a proper Glicko-style uncertainty (the
   new-team boost and forgetting after breaks were the strongest settings);
   re-test roster resets as more data arrives (they leaned positive); event

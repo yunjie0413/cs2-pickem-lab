@@ -25,12 +25,12 @@ def load_config(root: Path) -> tuple[Params, dict]:
     return params, cfg
 
 
-def load_model(root: Path) -> tuple[Engine, dict]:
-    """Engine with every past match processed, exactly as when it was fitted."""
+def load_model(root: Path, before: date | None = None) -> tuple[Engine, dict]:
+    """Engine with every past match processed (only matches before `before`, if given, for backtests)."""
     params, cfg = load_config(root)
     h = load_history(root, use_hltv=cfg.get("hltv_links", 0) > 0)
     eng = Engine(params, h.regions, h.players)
-    eng.run(h.inputs)
+    eng.run([m for m in h.inputs if before is None or m.date < before])
     return eng, cfg
 
 

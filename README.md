@@ -9,9 +9,11 @@ points, BO1/BO3 calibrated on real matches of each format (log loss 0.6547
 vs 0.6605 for Valve's points alone on validation matches). Six extra
 factors (region, time decay, roster reset, LAN, volatility, HLTV player
 ratings) were tested by backward elimination and none cleared the bar
-(journal Step 7a, decision 0007). Not yet done: strength uncertainty in the
-simulator and a backtest of whole ballots on past Majors (Step 7). The Singapore Stage 1 bracket was confirmed on
-2026-11-18.
+(journal Step 7a, decision 0007). Strength uncertainty was measured at zero
+(Step 7b), and map-specific strength showed no effect (Step 8). A backtest on
+four past Major Stage 1s found predicted pass rates in line with what
+happened. It found no detectable difference from Valve's points alone
+(Step 7c). The Singapore Stage 1 bracket was confirmed on 2026-11-18.
 
 ## How it works
 
@@ -63,6 +65,13 @@ Simulate a stage and choose a ballot (add `--model baseline` for Baseline 0,
 python scripts/run_stage.py data/events/singapore-2026-stage1.json
 ```
 
+Backtest on past Majors' Stage 1 (event files in `data/events/past/`,
+rebuilt by `scripts/build_past_events.py`):
+
+```bash
+python scripts/backtest_majors.py
+```
+
 ```bash
 python scripts/eval_baseline.py
 ```
@@ -93,6 +102,7 @@ pickem/data/vrs.py         Parser for Valve's VRS snapshot pages
 pickem/data/hltv.py        HLTV map list -> series (BO1/BO3/BO5) -> links to Valve's matches
 data/events/               Event files: teams, seeds, rosters, completed matches
 scripts/run_stage.py       End-to-end run for one event file
+scripts/backtest_majors.py Replay past Major Stage 1s and grade the ballots
 scripts/fit_model_v1.py    Tune Model v1, test each factor, compare with Baseline 0
 scripts/check_bo_format.py BO1 vs BO3 calibration from HLTV-linked matches
 tests/                     pytest suite
