@@ -1,16 +1,17 @@
 {
   "event": "PGL Major Singapore 2026",
   "stage": "Stage 1",
-  "status": "PROVISIONAL - verify team list and seeds against the official bracket before locking picks",
-  "dates_reported": "2026-11-24 to 2026-11-27 (news reports; not confirmed from an official source)",
+  "status": "CONFIRMED 2026-11-18: teams, seeds, round 1 pairings and format match Liquipedia; rosters match Wikipedia and Liquipedia (9z with a stand-in)",
+  "dates": "2026-11-24 to 2026-11-27 (Liquipedia); first match 2026-11-24 12:00 SGT (UTC+8)",
   "start_date": "2026-11-24",
   "rules": "Valve Major Supplemental Rulebook, ValveSoftware/counter-strike_rules_and_regs @ 621b7d9",
-  "seeding_method": "Stage 1 seeds follow VRS global standing (rulebook: Pre-event Seeding). Seeds below are the 16 reported Stage 1 teams sorted by the 2026-11-02 VRS global standings (ValveSoftware/counter-strike_regional_standings @ f8c55f2).",
+  "seeding_method": "Stage 1 seeds follow VRS global standing (rulebook: Pre-event Seeding), here the 2026-11-02 VRS global standings (ValveSoftware/counter-strike_regional_standings @ f8c55f2). Liquipedia's seed order (read 2026-11-18) is identical.",
   "verification_notes": [
-    "Team list taken from win.gg's event guide; insider-gaming.com and Wikipedia gave partial/conflicting lists.",
-    "Cross-check: this seeding implies Round 1 HEROIC vs Imperial (3v11) and FaZe vs Wildcard (4v12), matching the pairings insider-gaming.com reported.",
-    "Other 6 Round 1 pairings not yet confirmed.",
-    "Chinggis Warriors has two rosters in the VRS standings (ranks 55 and 263); the higher-ranked one is used here. Confirm which roster attends."
+    "Teams and seeds 1-16: Liquipedia, PGL Major Singapore 2026 Stage 1 page, read 2026-11-18.",
+    "Round 1 (all Bo1, 2026-11-24): HEROIC-Imperial, 9z-Lynn Vision, NiP-M80, 100 Thieves-Chinggis Warriors, PVISION-DENDELE, Liquid-GOSH, FaZe-Wildcard, Eternal Fire-FlyQuest (Liquipedia, Wikipedia and HLTV match pages agree). This is seed 1v9 ... 8v16, as the rules require.",
+    "Event names: PARIVISION plays as PVISION and BC.Game as GOSH (Singapore does not allow gambling brands). The model finds both by lineup; org_name keeps the usual name.",
+    "9z benched meyern on 2026-11-07; history plays as a stand-in at this Major (Liquipedia, 9z Team page).",
+    "Starting five of every other team matches Wikipedia's PGL Major Singapore 2026 page, read 2026-11-18. The Chinggis Warriors roster question is settled: cool4st, fury5k, ROUX, sk0R, tikuak."
   ],
   "teams": [
     {
@@ -28,7 +29,8 @@
     },
     {
       "seed": 2,
-      "name": "PARIVISION",
+      "name": "PVISION",
+      "org_name": "PARIVISION",
       "vrs_global_rank": 16,
       "vrs_points": 1560,
       "roster": [
@@ -114,7 +116,7 @@
         "HUASOPEEK",
         "luchov",
         "max",
-        "meyern"
+        "history"
       ]
     },
     {
@@ -171,7 +173,8 @@
     },
     {
       "seed": 13,
-      "name": "BC.Game",
+      "name": "GOSH",
+      "org_name": "BC.Game",
       "vrs_global_rank": 45,
       "vrs_points": 1337,
       "roster": [

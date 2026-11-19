@@ -446,25 +446,51 @@ below).
 predicts better, and its calibration says the gaps are real), and BO1s are no
 longer flattened twice.
 
-**Caveats:** the team list and seeding are still provisional. The simulator
+**Caveats:** the bracket was still unconfirmed when this ran; it has since
+been confirmed with no changes to the result (Step 6d). The simulator
 treats every win probability as exact (strength uncertainty is Step 7), so
 31.5% is probably a little optimistic.
 
 ---
 
+## 2026-11-18, Step 6d: Stage 1 bracket confirmed
+
+**Why only now:** the event file (Step 3) was built from news reports while
+the cloud session couldn't reach Liquipedia. After the move to the PC (Step
+5b) this check should have come first; it was put behind the model work. The
+model itself doesn't depend on the team list, only the ballot does.
+
+**Checked** (2026-11-18): Liquipedia (seeds, format, round 1, 9z's roster),
+Wikipedia (rosters, round 1, team names), HLTV match pages (round 1).
+- All 16 teams and seeds 1–16 match the event file; seeds follow the
+  2026-11-02 VRS standings.
+- All 8 round 1 pairings match (seed 1v9 … 8v16), all Bo1 on 2026-11-24;
+  the first match starts at 12:00 Singapore time (UTC+8).
+- The format matches the simulator: Bo3 for advancement and elimination
+  matches, Bo1 otherwise; later rounds paired by Buchholz, then seed.
+- PARIVISION plays as **PVISION** and BC.Game as **GOSH** (Singapore doesn't
+  allow gambling brands). The event file now uses these names so the ballot
+  reads like the in-game Pick'Em; the model finds both teams by lineup.
+- **9z benched meyern on 2026-11-07; history stands in.** The model still
+  finds 9z through the other four players but can't yet tell whether the
+  stand-in is weaker. That is one job of the player-ratings step.
+
+**Result:** every probability and both ballots are unchanged (Step 6c).
+
+---
+
 ## Open questions for the user (answer whenever you review)
 
-1. Confirm the Stage 1 team list and round 1 pairings from the official
-   bracket or in-game Pick'Em once they're published (Stage 1 is reported
-   to start 2026-11-24).
+1. ~~Confirm the Stage 1 bracket~~ Done: Step 6d.
 2. ~~Factor discussion~~ Done: decision 0005, amended by 0006.
 3. ~~Network policy / Liquipedia~~ No longer relevant: the project now runs
    on the user's PC, where Liquipedia is reachable.
 
 ## Next steps (proposed)
 
-- **Before picks lock:** confirm teams, seeds and round 1 pairings; update
-  the event file; re-run.
+- **Agreed order (user, 2026-11-18):** player ratings from HLTV (roster
+  changes, 9z's stand-in) → Step 7 → map model from the LAN maps we already
+  have; online map results only if the map model shows a real gain.
 - **Step 7:** strength uncertainty in the simulator (each simulated stage
   draws team strengths from how well we know each team: fewer matches with
   today's core, or a long break, means a wider spread), and a backtest of

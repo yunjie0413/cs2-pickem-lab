@@ -9,7 +9,8 @@ learning after breaks, blended with Valve's VRS points; BO1/BO3 calibrated
 on real matches of each format) predicts past matches better than Valve's
 points alone (log loss 0.6537 vs 0.6648 on matches it never saw). Not yet
 done: strength uncertainty in the simulator and a backtest of whole ballots
-on past Majors (Step 7). The Stage 1 team list is still provisional.
+on past Majors (Step 7). The Singapore Stage 1 bracket was confirmed on
+2026-11-18.
 
 ## How it works
 
