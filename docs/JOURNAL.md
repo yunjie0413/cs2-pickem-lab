@@ -656,6 +656,58 @@ outcomes; whether to revisit region is the user's call.
 
 ---
 
+## 2026-11-19, Step 7b: strength uncertainty in the simulator
+
+**User's choice:** Step 7 now (over revisiting region or the map model).
+
+**Idea.** A team's true strength at an event differs from our estimate,
+and the difference lasts the whole event, so its results there are linked:
+an underrated team tends to win several matches. Simulating every match
+with fixed probabilities treats the errors as independent.
+
+**Simulator** (`pickem/uncertainty.py`): each simulated stage draws one
+offset per team, e ~ N(0, σ²) in blend-logit units, and plays the whole
+stage with BO3 = sigmoid(s × (κ × logit + e_i − e_j)), BO1 from BO3 by
+independent maps. κ = √(1 + π s² σ² / 4) undoes the flattening that
+averaging over the offsets would cause, so a single match's probability,
+averaged over the draws, stays what the model was calibrated to (checked:
+within 0.008 for Stage 1 at σ = 0.35); only the links between matches
+change. Tests: `tests/test_uncertainty.py`.
+
+**Measuring σ** (`scripts/fit_uncertainty.py`): 960 HLTV-linked LAN
+matches in 62 events (training + validation; the test period untouched).
+Each team's rating is frozen at its first match of an event, as in the
+simulator; if teams are mis-rated, their residuals at the same event lean
+the same way, E[r_k r_l] ≈ g_k g_l σ² (weighted least squares on the
+products, 3,114 pairs).
+- Result: σ² = −0.017 (below zero, so σ = 0); split by period, both 0.
+  Only teams with fewer than 60 matches show a spread (σ = 0.85 ± 0.45,
+  121 pairs); every Stage 1 team has played 93 or more.
+- **Can the method find a spread that is there?** These same matches
+  simulated with a known σ: true 0.1 → estimated σ² 0.024 ± 0.070, 0.2 →
+  0.059 ± 0.083, 0.3 → 0.098 ± 0.089, 0.5 → 0.220 ± 0.102. The method is
+  about right but noisy: 960 matches only rule out σ above about 0.35
+  (about 105 rating points); 0 and 0.3 can't be told apart.
+- For comparison, theory for a rating updated by 32 points per match puts
+  its error at about 0.15–0.2 in these units.
+
+**Does it matter for the picks? No.** Stage 1, best ballot for P(≥5):
+
+| σ | ballot | P(≥5) |
+|---|---|---|
+| 0 (measured) | 3-0 PVISION, 100 Thieves · advance NiP, HEROIC, FaZe, Eternal Fire, 9z, M80 · 0-3 GOSH, Chinggis | 24.9% |
+| 0.2 (theory) | same | 24.8% |
+| 0.35 (upper end) | same | 24.4% |
+
+Every team's advance chance moves by under 1.5 points. The simulator uses
+the measured σ (0) by default; `run_stage.py --sigma X` sets it by hand.
+
+**Still open in Step 7:** backtesting whole ballots on past Majors (needs
+their brackets and results; a handful of stages has little power, so it
+can catch gross errors only).
+
+---
+
 ## Open questions for the user (answer whenever you review)
 
 1. ~~Confirm the Stage 1 bracket~~ Done: Step 6d.

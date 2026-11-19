@@ -68,20 +68,31 @@ def event_matrices(eng: Engine, cfg: dict, teams: list[dict], on: date, bo3_scal
     fits past BO1s as well as BO1s' own scale does); or sigmoid(bo1_scale x
     blend) if bo1_scale is given.
     """
-    # org_name: the name in Valve's data when the team plays under another name at this event
-    states = [team_state(eng, t.get("org_name", t["name"]), t["roster"], on) for t in teams]
+    logit, states = event_logits(eng, cfg, teams, on)
     n = len(teams)
     p1, p3 = np.full((n, n), 0.5), np.full((n, n), 0.5)
-    w_own, w_vrs = cfg["blend"]["own"], cfg["blend"]["vrs"]
     for i in range(n):
         for j in range(n):
             if i == j:
                 continue
-            si, sj = states[i], states[j]
-            z = LN10_400 * (si["rating"] - sj["rating"]) * math.exp(-(si["vol"] + sj["vol"]))
-            v = LN10_400 * (teams[i]["vrs_points"] - teams[j]["vrs_points"])
-            logit = w_own * z + w_vrs * v
-            p3[i, j] = 1 / (1 + math.exp(-bo3_scale * logit))
+            p3[i, j] = 1 / (1 + math.exp(-bo3_scale * logit[i, j]))
             p1[i, j] = (map_from_bo3(p3[i, j]) if bo1_scale is None
-                        else 1 / (1 + math.exp(-bo1_scale * logit)))
+                        else 1 / (1 + math.exp(-bo1_scale * logit[i, j])))
     return p1, p3, states
+
+
+def event_logits(eng: Engine, cfg: dict, teams: list[dict], on: date) -> tuple[np.ndarray, list[dict]]:
+    """(blend logit matrix before the format scale, team states). teams: event-file entries in seed order."""
+    # org_name: the name in Valve's data when the team plays under another name at this event
+    states = [team_state(eng, t.get("org_name", t["name"]), t["roster"], on) for t in teams]
+    n = len(teams)
+    logit = np.zeros((n, n))
+    w_own, w_vrs = cfg["blend"]["own"], cfg["blend"]["vrs"]
+    for i in range(n):
+        for j in range(n):
+            if i != j:
+                si, sj = states[i], states[j]
+                z = LN10_400 * (si["rating"] - sj["rating"]) * math.exp(-(si["vol"] + sj["vol"]))
+                v = LN10_400 * (teams[i]["vrs_points"] - teams[j]["vrs_points"])
+                logit[i, j] = w_own * z + w_vrs * v
+    return logit, states

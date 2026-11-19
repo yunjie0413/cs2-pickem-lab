@@ -49,7 +49,15 @@ python scripts/fit_model_v1.py
 python scripts/check_bo_format.py
 ```
 
-Simulate a stage and choose a ballot (add `--model baseline` for Baseline 0):
+and the spread of team strength per event for the simulator (Step 7; also
+needs the HLTV file):
+
+```bash
+python scripts/fit_uncertainty.py
+```
+
+Simulate a stage and choose a ballot (add `--model baseline` for Baseline 0,
+`--sigma X` to set the strength spread by hand):
 
 ```bash
 python scripts/run_stage.py data/events/singapore-2026-stage1.json

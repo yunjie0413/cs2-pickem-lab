@@ -41,11 +41,15 @@ def main():
     ap.add_argument("--model", choices=["v1", "baseline"], default="v1")
     ap.add_argument("--scale", type=float, default=1100.0, help="Baseline 0 only: Elo scale (1100 = fitted in Step 5)")
     ap.add_argument("--seed", type=int, default=2026)
+    ap.add_argument("--sigma", type=float, default=None,
+                    help="Model v1 only: spread of each team's strength per simulated stage (blend-logit units; "
+                         "default: data/processed/uncertainty.json, 0 if absent)")
     args = ap.parse_args()
 
     event = json.loads(args.event.read_text(encoding="utf-8"))
     teams_info = sorted(event["teams"], key=lambda t: t["seed"])
     teams = [t["name"] for t in teams_info]
+    sampler = None
     if args.model == "baseline":
         p_bo1, p_bo3 = matrices_from_points([t["vrs_points"] for t in teams_info], scale=args.scale)
         model_label = f"Baseline 0 (VRS points, Elo scale {args.scale:g})"
@@ -58,9 +62,21 @@ def main():
         p_bo1, p_bo3, states = event_matrices(eng, cfg, teams_info, on, bo3_scale=bo["bo3_scale"])
         missing = [t["name"] for t, s in zip(teams_info, states) if not s["found"]]
         kept = ", ".join(cfg.get("kept_factors", [])) or "none"
+        sigma = args.sigma
+        u_path = ROOT / "data/processed/uncertainty.json"
+        if sigma is None:
+            sigma = json.loads(u_path.read_text(encoding="utf-8"))["sigma"] if u_path.exists() else 0.0
         model_label = (f"Model v1 (own rating, factors kept: {kept}; VRS blend; BO3 scale {bo['bo3_scale']:.2f}"
                        f"{'' if bo_path.exists() else ' (NOT fitted: no HLTV data)'}; "
-                       f"BO1 from BO3 by independent maps)")
+                       f"BO1 from BO3 by independent maps; strength spread per stage sigma = {sigma:g})")
+        if sigma > 0:
+            from pickem.predict import event_logits
+            from pickem.uncertainty import make_sampler, marginal_check
+            logit, _ = event_logits(eng, cfg, teams_info, on)
+            sampler = make_sampler(logit, bo["bo3_scale"], sigma)
+            d1, d3 = marginal_check(logit, bo["bo3_scale"], sigma)
+            model_label += (f"\n  single-match probabilities averaged over the strength draws differ from the "
+                            f"fixed ones by at most {d1:.3f} (BO1) / {d3:.3f} (BO3)")
         if missing:
             model_label += f"\n  WARNING: no match history found for {', '.join(missing)}"
         model_label += "\n  team ratings (matched in Valve's data as / matches played / last match):"
@@ -82,8 +98,9 @@ def main():
     print(f"Model: {model_label}\n")
 
     t0 = time.time()
-    search = simulate.run(teams, p_bo1, p_bo3, n_sims=args.sims, seed=args.seed, fixed=fixed)
-    fresh = simulate.run(teams, p_bo1, p_bo3, n_sims=args.confirm_sims, seed=args.seed + 1, fixed=fixed)
+    search = simulate.run(teams, p_bo1, p_bo3, n_sims=args.sims, seed=args.seed, fixed=fixed, sampler=sampler)
+    fresh = simulate.run(teams, p_bo1, p_bo3, n_sims=args.confirm_sims, seed=args.seed + 1, fixed=fixed,
+                         sampler=sampler)
     print(search.table())
     print(f"(simulation took {time.time() - t0:.1f}s)")
 
