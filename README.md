@@ -13,7 +13,12 @@ ratings) were tested by backward elimination and none cleared the bar
 (Step 7b), and map-specific strength showed no effect (Step 8). A backtest on
 four past Major Stage 1s found predicted pass rates in line with what
 happened. It found no detectable difference from Valve's points alone
-(Step 7c). The Singapore Stage 1 bracket was confirmed on 2026-11-18.
+(Step 7c). Scored once on the test period (1,440 matches from 2025-11),
+Model v1 beats Valve's points by 0.011 ± 0.003 log loss per match.
+
+**Final Singapore Stage 1 picks** (journal Step 9; P(≥5 correct) ≈ 25%):
+3-0 PVISION, 100 Thieves | advance Ninjas in Pyjamas, HEROIC, FaZe,
+Eternal Fire, 9z, M80 | 0-3 GOSH, Chinggis Warriors.
 
 ## How it works
 

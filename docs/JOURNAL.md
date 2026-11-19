@@ -851,6 +851,77 @@ Model v1's B ballots, for reference:
 **For Singapore:** nothing changes. The only pick that depends on region
 is M80 vs Liquid for the last advance slot (Step 7a).
 
+## 2026-11-19, Step 9: test period scored once, final Singapore picks
+
+**User's choice:** "Finalize now", over hedging the region pick or using
+Baseline 0.
+
+**Test period, scored once** (`fit_model_v1.py --final`). The tuning is
+deterministic: it repeated the earlier result, no factors kept and blend
+0.581 / 0.093, and rewrote the same `model_v1.json`. Matches from
+2025-11-01 onward, both teams in the VRS top 50:
+
+| | log loss | Brier | accuracy |
+|---|---|---|---|
+| coin flip | 0.6931 | 0.2500 | 50.0% |
+| Baseline 0 (VRS points, refitted) | 0.6648 | 0.2362 | 59.5% |
+| Model v1, own rating only | 0.6536 | 0.2311 | 60.6% |
+| **Model v1, own rating + VRS blend** | **0.6538** | **0.2312** | **60.8%** |
+
+- **Model v1 beats Baseline 0 by +0.0110 ± 0.0034 per match (3.2 SE)**
+  on 1,440 matches. The margin is larger than on validation (+0.0058 ±
+  0.0052, 624 matches), so the selection didn't overfit validation.
+- On the test period, the VRS term adds nothing beyond our own rating
+  (0.6536 vs 0.6538). It is kept, because the blend was fixed before this
+  score.
+- Calibration is good. Favourites at 55–70% won about 1.5–2 points less
+  often than predicted, and favourites above 70% won slightly more often.
+- Not tested here: the BO3 scale (fitted on linked matches, test period
+  included) and anything Major-specific (Step 7c).
+
+**Inputs are current (checked today):**
+- Valve's VRS repository: the local copy matches the remote head. The
+  newest snapshot is 2026-11-02, and the next is expected on the first
+  Monday of December, after the Major.
+- Liquipedia: the event page was last edited 2026-11-14 and the Stage 1
+  page 2026-11-16. Both edits predate our 2026-11-18 confirmation, so no
+  roster has changed.
+
+**Final ballot (B, highest P(≥5), per decision 0002):**
+
+| Pick | Teams |
+|---|---|
+| 3-0 | **PVISION, 100 Thieves** |
+| Advance (3-1 or 3-2) | **Ninjas in Pyjamas, HEROIC, FaZe, Eternal Fire, 9z, M80** |
+| 0-3 | **GOSH, Chinggis Warriors** |
+
+- P(≥5 correct) = 24.9%. Expected correct picks = 3.60, on 100,000 fresh
+  simulations.
+- P(exactly k correct): 1: 5%, 2: 16%, 3: 27%, 4: 26%, 5: 16%, 6: 7%,
+  7: 2%.
+- Ballot A (most expected correct) swaps two picks: Liquid replaces
+  PVISION in 3-0, and PVISION replaces M80 in advance. It scores 24.7%.
+  The two are practically tied, and B is the formal pick.
+
+**Caveats:**
+1. **About 1 chance in 4.** Even the best ballot most likely gets 3 or 4
+   correct. The four past Stage 1s gave 22–30% (Step 7c).
+2. **Region risk.** If teams from Americas and Asia are overrated by our
+   rating (Step 7a, and the hint in Step 7c), the M80 advance pick is the
+   one at risk. With the region factor, Liquid would take that slot.
+3. **No matches after 2026-11-01.** Valve's data ends with the 2026-11-02
+   snapshot, so the last three weeks of form are missing.
+4. **9z play with a stand-in** (history in for meyern). The player-rating
+   adjustment is 0 because roster_skill was dropped, so 9z's rating
+   assumes their usual strength.
+5. **σ = 0:** no extra spread of team strength per stage (Step 7b).
+
+**Before the lock (2026-11-24 12:00 SGT):**
+- Re-check the rosters once on 2026-11-23 or the morning of the 24th.
+- If a lineup changes, update `data/events/singapore-2026-stage1.json` and
+  re-run `python scripts/run_stage.py data/events/singapore-2026-stage1.json`.
+- Otherwise the picks above stand.
+
 ---
 
 ## Open questions for the user (answer whenever you review)
@@ -867,9 +938,10 @@ is M80 vs Liquid for the last advance slot (Step 7a).
   have; online map results only if the map model shows a real gain.
 - ~~**Step 7:** strength uncertainty and a backtest on past Majors~~ Done:
   Steps 7b and 7c.
-- **Finalize:** score the test period once (`--final`), write the final
-  Singapore picks with their caveats, and re-run if a roster changes before
-  the lock (2026-11-24 12:00 SGT).
+- ~~**Finalize**~~ Done: Step 9. Remaining: one roster re-check before the
+  lock (2026-11-24 12:00 SGT), and a re-run only if a lineup changes.
+- **Stage 2:** once Stage 1 ends, a new event file with the 8 qualifiers
+  plus the Stage 2 invites, and the same pipeline.
 - **Model v2 ideas from Step 6:** a proper Glicko-style uncertainty (the
   new-team boost and forgetting after breaks were the strongest settings);
   re-test roster resets as more data arrives (they leaned positive); event
