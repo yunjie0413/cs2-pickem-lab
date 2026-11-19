@@ -708,6 +708,49 @@ can catch gross errors only).
 
 ---
 
+## 2026-11-19, Step 8: map model
+
+**User's choice:** the map model next (over the past-Major backtest,
+revisiting region, or finalizing).
+
+**Data:** the LAN map results already collected (Step 6a): 5,666 maps in
+2,450 series between HLTV top-50 teams, 2024-12-01 to 2026-11-17. Thin per
+team: over the last 12 months most Stage 1 teams have 5–40 LAN maps on each
+map, Chinggis Warriors none; Cache entered the pool only in 2026-Q3.
+
+**Plan, fixed before any result:**
+1. *Gatekeeper, map level, with the map played known.* For each map, the
+   current model's map win probability p0 (series probability → map
+   probability by independent maps) is adjusted by per-team, per-map
+   offsets learned online from earlier maps (`pickem/maps.py`): centred
+   per team, so they only move a team between its own maps; fading with a
+   half-life. Learning rate and half-life tuned on training maps
+   (2024-12 to 2025-05); kept only if better than p0 on validation maps
+   (2025-06 to 2025-10) by more than 2 standard errors. Test period unused.
+2. Only if step 1 passes: a simple veto turning offsets into BO1/BO3
+   probabilities, tested at series level, then Stage 1. If step 1 fails,
+   no veto model can help and the map model stops there (and online maps,
+   which the user allowed only if the map model shows a difference, are
+   not collected).
+
+**Result: step 1 fails, so the map model stops** (`scripts/fit_map_model.py`).
+5,495 maps with a linked series and VRS points (training 1,031,
+validation 1,208).
+- Tuning on training maps: the best setting (learning rate 0.05,
+  half-life 60 days) gains only +0.0004 per map; any faster learning makes
+  predictions clearly worse (learning rate 0.5: −0.017 to −0.030), so the
+  map signal in 5–40 maps per team is weaker than the noise.
+- Validation: log loss 0.6752 without offsets, 0.6755 with; gain −0.0003 ±
+  0.0007 (−0.5 SE). No effect, even with the played map known; with the
+  veto unknown, as in Pick'Em, it could only be weaker.
+- Caveat: the file has no veto data. Teams win their own map picks more
+  often, which can't be measured here; in a BO3 each team gets one pick,
+  so at series level it largely cancels.
+- Online map results are not collected (the user's condition: only if the
+  map model shows a difference). Stage 1 is unchanged.
+
+---
+
 ## Open questions for the user (answer whenever you review)
 
 1. ~~Confirm the Stage 1 bracket~~ Done: Step 6d.
