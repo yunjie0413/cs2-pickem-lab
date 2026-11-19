@@ -1,7 +1,9 @@
 # 0005: Factors for Model v1 (Stage 1)
 
 Date: 2026-11-18. Status: accepted (user's choices, made from the options and
-analysis below).
+analysis below). Amended by 0006: Valve's LAN flags and event weights leak
+the future, so LAN status now comes from HLTV and event weighting is on hold.
+Test results for every factor: docs/JOURNAL.md, Step 6.
 
 ## Rule for every factor
 A factor stays in the model only if it improves predictions (log loss) on
